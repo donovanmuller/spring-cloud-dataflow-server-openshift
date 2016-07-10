@@ -1,0 +1,52 @@
+server:
+  port: 9393
+management:
+  contextPath: /management
+info:
+  app:
+    name: "@project.artifactId@"
+    description: "@project.description@"
+    version: "@project.version@"
+security:
+  basic:
+    enabled: false
+
+spring:
+  application:
+    name: spring-cloud-dataflow-server-openshift
+  cloud:
+    config:
+      uri: http://localhost:8888
+
+---
+# Configuration options when using Kafka binder:
+spring:
+  cloud:
+    deployer:
+      kubernetes:
+        createLoadBalancer: false
+        environmentVariables: 'SPRING_CLOUD_STREAM_KAFKA_BINDER_BROKERS=${KAFKA_SERVICE_HOST}:${KAFKA_SERVICE_PORT},SPRING_CLOUD_STREAM_KAFKA_BINDER_ZK_NODES=${ZK_SERVICE_HOST}:${ZK_SERVICE_PORT}'
+
+# Configuration options when using RabbitMQ binder:
+#spring:
+#  cloud:
+#    deployer:
+#      kubernetes:
+#        createLoadBalancer: false
+#        environmentVariables: 'SPRING_RABBITMQ_HOST=${RABBITMQ_SERVICE_HOST},SPRING_RABBITMQ_PORT=${RABBITMQ_SERVICE_PORT}'
+
+
+# If you prefer to use Eureka to locate the Config Server, you can do that by setting
+# spring.cloud.config.discovery.enabled=true (default "false"). The net result of that is 
+# that client apps all need a bootstrap.yml (or an environment variable) with the Eureka 
+# server address, e.g. in eureka.client.serviceUrl.defaultZone
+#---
+#spring:
+#  cloud:
+#     config:
+#        discovery:
+#           enabled: true
+#eureka:
+#  client:
+#    serviceUrl:
+#      defaultZone: http://localhost:8761/eureka/
