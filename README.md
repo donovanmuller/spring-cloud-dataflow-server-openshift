@@ -15,6 +15,11 @@ projects or are rejected, you must clone and install these forked repositories:
 * [spring-cloud-deployer](https://github.com/donovanmuller/spring-cloud-deployer) - donovanmuller/spring-cloud-deployer
 * [spring-cloud-deployer-kubernetes](https://github.com/donovanmuller/spring-cloud-deployer-kubernetes) - donovanmuller/spring-cloud-deployer-kubernetes
 
+The following PR's have been opened to include the modifications mentioned above in the upstream projects:
+
+* spring-cloud-deployer [[#94](https://github.com/spring-cloud/spring-cloud-deployer/pull/94)]
+* spring-cloud-deployer-kubernetes [[#40](https://github.com/spring-cloud/spring-cloud-deployer-kubernetes/pull/40)]
+
 ```
 $ git clone https://github.com/donovanmuller/spring-cloud-deployer-kubernetes.git && \
   cd spring-cloud-deployer-kubernetes && \
