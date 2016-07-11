@@ -65,3 +65,10 @@ The `default` project is used in this properties absence.
 You can follow either the [Local](http://docs.spring.io/spring-cloud-dataflow/docs/current-SNAPSHOT/reference/htmlsingle/#spring-cloud-dataflow-register-apps) 
 or [Kubernetes](http://docs.spring.io/spring-cloud-dataflow-server-kubernetes/docs/current-SNAPSHOT/reference/htmlsingle/#_deploying_streams_on_kubernetes) 
 documentation on registering and app, creating a stream/task definition and deploying the apps.
+
+## Further Reading
+
+Please see the following posts for more information:
+
+* [Spring Cloud Deployer OpenShift](http://blog.switchbit.io/spring-cloud-deployer-openshift)
+* [SCDF OpenShift: Deploying Maven artifacts with custom Dockerfile](http://blog.switchbit.io/scdf-openshift-deploying-maven-artifacts-with-custom-dockerfile)
