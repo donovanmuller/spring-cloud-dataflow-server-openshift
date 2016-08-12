@@ -12,21 +12,15 @@ There are some suggested modifications to this and the [`spring-cloud-deployer`]
 project that aid in this extension and until those modifications are either considered for inclusion in the upstream
 projects or are rejected, you must clone and install these forked repositories:
 
-* [spring-cloud-deployer](https://github.com/donovanmuller/spring-cloud-deployer) - donovanmuller/spring-cloud-deployer
 * [spring-cloud-deployer-kubernetes](https://github.com/donovanmuller/spring-cloud-deployer-kubernetes) - donovanmuller/spring-cloud-deployer-kubernetes
 
 The following PR's have been opened to include the modifications mentioned above in the upstream projects:
 
-* ~~spring-cloud-deployer [[#94](https://github.com/spring-cloud/spring-cloud-deployer/pull/94)]~~ merged as [fac89fe](https://github.com/spring-cloud/spring-cloud-deployer/commit/fac89fe55dc4292615d3443f75b49192e51a6c55)
 * ~~spring-cloud-deployer-kubernetes [[#40](https://github.com/spring-cloud/spring-cloud-deployer-kubernetes/pull/40)]~~ merged as [634ce96](https://github.com/spring-cloud/spring-cloud-deployer-kubernetes/commit/634ce96dc10383b88c17ceaa2e75582005122c5c)
 
 ```
 $ git clone https://github.com/donovanmuller/spring-cloud-deployer-kubernetes.git && \
   cd spring-cloud-deployer-kubernetes && \
-  ./mvnw install
-  
-$ git clone https://github.com/donovanmuller/spring-cloud-deployer.git && \
-  cd spring-cloud-deployer && \
   ./mvnw install
 ```
 
@@ -35,11 +29,11 @@ Once these projects have been built successfully, you can clone and build the `s
 
 ```
 $ git clone https://github.com/donovanmuller/spring-cloud-deployer-openshift.git && \
-  cd spring-cloud-deployer && \
+  cd spring-cloud-deployer-openshift && \
   ./mvnw install
   
 $ git clone https://github.com/donovanmuller/spring-cloud-dataflow-server-openshift.git && \
-  cd spring-cloud-deployer && \
+  cd spring-cloud-dataflow-server-openshift && \
   ./mvnw package
 ```
 
