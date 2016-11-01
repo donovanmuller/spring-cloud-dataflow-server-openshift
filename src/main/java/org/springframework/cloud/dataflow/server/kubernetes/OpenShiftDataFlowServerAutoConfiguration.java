@@ -33,7 +33,7 @@ import org.springframework.core.io.ResourceLoader;
 /**
  * AutoConfiguration for the {@link OpenShiftDataFlowServer}
  *
- * @author Thomas Risberg
+ * @author Donovan Muller
  */
 @Configuration
 @AutoConfigureOrder(Ordered.HIGHEST_PRECEDENCE)
