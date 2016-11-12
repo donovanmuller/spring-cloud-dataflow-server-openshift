@@ -7,13 +7,16 @@
 	<parent>
 		<groupId>org.springframework.cloud</groupId>
 		<artifactId>spring-cloud-dataflow-parent</artifactId>
-		<version>1.1.0.BUILD-SNAPSHOT</version>
+		<version>1.1.0.RC1</version>
 		<relativePath/>
 	</parent>
 
 	<groupId>org.springframework.cloud</groupId>
 	<artifactId>spring-cloud-dataflow-server-openshift</artifactId>
 	<version>1.0.1.BUILD-SNAPSHOT</version>
+
+	<name>Spring Cloud Data Flow Server for OpenShift</name>
+	<description>A Spring Cloud Data Flow Deployer Server for OpenShift 3</description>
 
 	<properties>
 		<start-class>org.springframework.cloud.dataflow.server.kubernetes.OpenShiftDataFlowServer</start-class>
@@ -24,17 +27,17 @@
 			<dependency>
 				<groupId>org.springframework.cloud</groupId>
 				<artifactId>spring-cloud-deployer-openshift</artifactId>
-				<version>1.0.1.BUILD-SNAPSHOT</version>
+				<version>1.1.0.BUILD-SNAPSHOT</version>
 			</dependency>
 			<dependency>
 				<groupId>org.springframework.cloud</groupId>
 				<artifactId>spring-cloud-starter-dataflow-server-kubernetes</artifactId>
-				<version>1.1.0.M1</version>
+				<version>1.1.0.BUILD-SNAPSHOT</version>
 			</dependency>
 			<dependency>
 				<groupId>org.springframework.cloud</groupId>
 				<artifactId>spring-cloud-deployer-spi</artifactId>
-				<version>1.1.0.BUILD-SNAPSHOT</version>
+				<version>1.1.0.RC1</version>
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
@@ -78,7 +81,7 @@
 			<plugin>
 				<groupId>io.fabric8</groupId>
 				<artifactId>docker-maven-plugin</artifactId>
-				<version>0.16.7</version>
+				<version>0.17.2</version>
 				<configuration>
 					<images>
 						<image>
@@ -89,7 +92,7 @@
 									<volume>/tmp</volume>
 								</volumes>
 								<entryPoint>
-									java $JAVA_OPTS -Djava.security.egd=file:/dev/urandom -jar /maven/spring-cloud-dataflow-server-openshift.jar
+									exec java $JAVA_OPTS -Djava.security.egd=file:/dev/urandom -jar /maven/spring-cloud-dataflow-server-openshift.jar
 								</entryPoint>
 								<assembly>
 									<descriptor>assembly.xml</descriptor>
