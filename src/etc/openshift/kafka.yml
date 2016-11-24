@@ -16,7 +16,7 @@ items:
       spec:
         containers:
         - name: kafka
-          image: spotify/kafka
+          image: donovanmuller/docker-kafka:0.10.0.1
           ports:
           - containerPort: 9092
           - containerPort: 2181

@@ -1,0 +1,2 @@
+org.sspringframework.boot.autoconfigure.EnableAutoConfiguration=\
+    org.springframework.cloud.dataflow.server.openshift.OpenShiftDataFlowServerAutoConfiguration

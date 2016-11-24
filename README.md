@@ -1,4 +1,4 @@
-# spring-cloud-dataflow-server-openshift
+# Spring Cloud Data Flow Server for OpenShift
 
 This project provides a Spring Cloud Data Flow server for deployments to OpenShift 3, using the 
 [Spring Cloud Deployer OpenShift](https://github.com/donovanmuller/spring-cloud-deployer-openshift) 
@@ -6,25 +6,7 @@ implementation of the [Spring Cloud Deployer](https://github.com/spring-cloud/sp
 
 ## Building
 
-The `spring-cloud-deployer-openshift` project is an extension of 
-[`spring-cloud-deployer-kubernetes`](https://github.com/spring-cloud/spring-cloud-deployer-kubernetes).
-There are some suggested modifications to this and the [`spring-cloud-deployer`](https://github.com/spring-cloud/spring-cloud-deployer)
-project that aid in this extension and until those modifications are either considered for inclusion in the upstream
-projects or are rejected, you must clone and install these forked repositories:
-
-* [spring-cloud-deployer-kubernetes](https://github.com/donovanmuller/spring-cloud-deployer-kubernetes) - donovanmuller/spring-cloud-deployer-kubernetes
-
-The following PR's have been opened to include the modifications mentioned above in the upstream projects:
-
-* ~~spring-cloud-deployer-kubernetes [[#40](https://github.com/spring-cloud/spring-cloud-deployer-kubernetes/pull/40)]~~ merged as [634ce96](https://github.com/spring-cloud/spring-cloud-deployer-kubernetes/commit/634ce96dc10383b88c17ceaa2e75582005122c5c)
-
-```
-$ git clone https://github.com/donovanmuller/spring-cloud-deployer-kubernetes.git && \
-  cd spring-cloud-deployer-kubernetes && \
-  ./mvnw install
-```
-
-Once these projects have been built successfully, you can clone and build the `spring-cloud-deployer-openshift` and
+You must clone and build the `spring-cloud-deployer-openshift` and
  `spring-cloud-dataflow-server-openshift` projects:
 
 ```
@@ -49,7 +31,7 @@ $ java -Dopenshift.url=https://172.28.128.4:8443 \
   -Dkubernetes.trust.certificates=true \
   -Dkubernetes.auth.basic.username=admin \
   -Dkubernetes.auth.basic.password=admin \
-  -jar spring-cloud-dataflow-server-openshift-1.0.0.BUILD-SNAPSHOT.jar \
+  -jar spring-cloud-dataflow-server-openshift-1.1.0.BUILD-SNAPSHOT.jar \
   --spring.cloud.deployer.kubernetes.namespace=scdf-apps \
   --maven.resolvePom=true \
   --maven.remote-repositories.spring.url=http://repo.spring.io/snapshots

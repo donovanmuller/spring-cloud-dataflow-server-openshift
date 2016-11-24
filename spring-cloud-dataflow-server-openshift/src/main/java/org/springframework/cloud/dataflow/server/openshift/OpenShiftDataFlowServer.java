@@ -1,4 +1,4 @@
-package org.springframework.cloud.dataflow.server.kubernetes;
+package org.springframework.cloud.dataflow.server.openshift;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.cloud.dataflow.server.EnableDataFlowServer;
@@ -11,7 +11,7 @@ import org.springframework.cloud.dataflow.server.EnableDataFlowServer;
 @EnableDataFlowServer
 public class OpenShiftDataFlowServer {
 
-    public static void main(String[] args) {
-        SpringApplication.run(OpenShiftDataFlowServer.class, args);
-    }
+	public static void main(String[] args) {
+		SpringApplication.run(OpenShiftDataFlowServer.class, args);
+	}
 }
