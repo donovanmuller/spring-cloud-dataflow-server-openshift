@@ -1,0 +1,132 @@
+apiVersion: v1
+kind: Template
+metadata:
+  name: "nexus"
+  annotations:
+    openshift.io/display-name: "Sonatype Nexus Template"
+    description: |-
+      A template for an ephemeral instance of Sonatype Nexus.
+      For use as a local Maven repository for custom applications.
+      See http://www.sonatype.org/nexus/
+    iconClass: "icon-openjdk"
+message: |-
+  Deploying Nexus...
+  Nexus will be available at http://${ROUTE_HOST}${CONTEXT_PATH}
+labels:
+  template: "nexus"
+objects:
+  - apiVersion: v1
+    kind: DeploymentConfig
+    metadata:
+      name: nexus
+    spec:
+      triggers:
+        - type: ConfigChange
+      replicas: 1
+      selector:
+        name: nexus
+      template:
+        metadata:
+          labels:
+            name: nexus
+        spec:
+          containers:
+            - name: nexus
+              image: sonatype/nexus
+              ports:
+                - name: http
+                  containerPort: 8081
+              env:
+                - name: CONTEXT_PATH
+                  value: ${CONTEXT_PATH}
+                - name: MIN_HEAP
+                  value: ${MIN_HEAP}
+                - name: MAX_HEAP
+                  value: ${MAX_HEAP}
+              readinessProbe:
+                httpGet:
+                  path: /service/local/status
+                  port: 8081
+                initialDelaySeconds: 40
+                timeoutSeconds: 5
+              livenessProbe:
+                httpGet:
+                  path: /service/local/status
+                  port: 8081
+                initialDelaySeconds: 40
+                timeoutSeconds: 5
+              resources:
+                limits:
+                  cpu: ${SERVER_LIMITS_CPU}
+                  memory: ${SERVER_LIMITS_MEMORY}
+                requests:
+                  cpu: ${SERVER_REQUESTS_CPU}
+                  memory: ${SERVER_REQUESTS_MEMORY}
+          restartPolicy: Always
+          serviceAccount: scdf
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      labels:
+        name: nexus
+      name: nexus
+    spec:
+      template:
+        metadata:
+          labels:
+            name: nexus
+            app: bison
+      ports:
+        - name: http
+          port: 8081
+          targetPort: http
+      selector:
+        name: nexus
+  - apiVersion: v1
+    kind: Route
+    metadata:
+      name: nexus
+    spec:
+      template:
+        metadata:
+          labels:
+            name: nexus
+            app: bison
+      host: ${ROUTE_HOST}
+      to:
+        kind: Service
+        name: nexus
+      port:
+        targetPort: http
+parameters:
+  - name: CONTEXT_PATH
+    displayName: "Web context path"
+    description: "Passed as -Dnexus-webapp-context-path. This is used to define the URL which Nexus is accessed. Defaults to '/'"
+    value: "/"
+  - name: ROUTE_HOST
+    displayName: The OpenShift Route host value
+    description: A explicit Route host value, otherise the default is used. See https://docs.openshift.org/latest/dev_guide/routes.html
+  - name: SERVER_REQUESTS_MEMORY
+    displayName: Default memory request for the Data Flow Server
+    description: "The default memory request for Nexus. See https://docs.openshift.org/latest/dev_guide/compute_resources.html#dev-compute-resources"
+    value: "384Mi"
+  - name: SERVER_REQUESTS_CPU
+    displayName: Default CPU request for the Data Flow Server
+    description: "The default CPU request for Nexus. See https://docs.openshift.org/latest/dev_guide/compute_resources.html#dev-compute-resources"
+    value: "500m"
+  - name: SERVER_LIMITS_MEMORY
+    displayName: Default memory limit for the Data Flow Server
+    description: "The default memory limit for Nexus. See https://docs.openshift.org/latest/dev_guide/compute_resources.html#dev-compute-resources"
+    value: "512Mi"
+  - name: SERVER_LIMITS_CPU
+    displayName: Default CPU limit for the Data Flow Server
+    description: "The default CPU limit for Nexus See https://docs.openshift.org/latest/dev_guide/compute_resources.html#dev-compute-resources"
+    value: "1000m"
+  - name: MIN_HEAP
+    displayName: "Passed as -Xms. Defaults to 64m"
+    description: "The default CPU limit for Nexus"
+    value: "256m"
+  - name: MAX_HEAP
+    displayName: "Passed as -Xmx. Defaults to 128m"
+    description: "The default CPU limit for Nexus"
+    value: "384m"

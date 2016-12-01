@@ -13,7 +13,7 @@
     <artifactId>spring-cloud-dataflow-server-openshift</artifactId>
 
     <!-- Used in the Spring Boot Banner -->
-    <name>OpenShift Data Flow Server</name>
+    <name>Data Flow Server for OpenShift</name>
 
     <properties>
         <start-class>org.springframework.cloud.dataflow.server.openshift.OpenShiftDataFlowServer</start-class>
@@ -76,7 +76,7 @@
                 <configuration>
                     <images>
                         <image>
-                            <name>springcloud/${project.artifactId}</name>
+                            <name>donovanmuller/${project.artifactId}</name>
                             <build>
                                 <from>java:8-alpine</from>
                                 <volumes>

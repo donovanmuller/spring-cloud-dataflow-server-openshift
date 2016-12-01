@@ -1,0 +1,95 @@
+[[features]]
+= Features
+
+[partintro]
+--
+The Data Flow Server for OpenShift includes the following features over and above those of the http://cloud.spring.io/spring-cloud-dataflow-server-kubernetes/[Kubernetes Server].
+--
+
+== Support for Maven Resource
+
+Possibly the most prominent feature of the OpenShift Server besides the ability to deploy to OpenShift is
+the ability to support Maven resources. The OpenShift Server supports Docker resources (`docker://`) just like the
+Kubernetes Server but can additionally handle Maven resources (`maven://`) enabled by the OpenShift
+https://docs.openshift.org/latest/dev_guide/builds.html[Build] mechanism.
+
+For example, both the below app registrations (via the Data Flow Shell) are valid and supported:
+
+```
+dataflow:>app register --name http-mvn --type source --uri maven://org.springframework.cloud.stream.app:http-source-rabbit:1.1.0.RELEASE
+dataflow:>app import --name http-docker --type source --uri app register --name http --type source --uri docker:springcloudstream/http-source-rabbit:1.1.0.RELEASE
+```
+
+See the <<getting-started>> section for examples of deploying both Docker and Maven resource types.
+
+== Build Hashing for Maven Resource Apps
+
+When deploying Maven resource (`maven://`) based apps, an OpenShift https://docs.openshift.org/latest/dev_guide/builds.html[Build]
+will be triggered to build the Docker image that will in turn be deployed. It is not efficient to trigger a new build
+for an app that was already deployed and to which there are no changes detected in the Maven Jar artifact. The resulting image
+would essentially be identical every time.
+
+To help with this, the OpenShift Server will create a hash of the Maven artifact located in the local cache.
+On subsequent deploys of the same app (same Maven artifact) this hash will first be checked against existing
+buils and if found, a new build will not be triggered but instead the existing image will be used.
+
+This feature can be disabled by specifying the `spring.cloud.deployer.openshift.forceBuild=true` as either
+a deployer (affects all deployed apps) or deployment (on a per app basis) property.
+
+== Volumes and Volume Mounts
+
+Volumes and volume mounts provide the ability for a Spring Cloud Stream application to access persistent storage
+made available on the OpenShift cluster. The supported volume and volume mount types are determined by the
+underlying https://github.com/fabric8io/kubernetes-model[kubernetes-model] library. All of the volume types
+that have a generated mode are supported.
+
+Volumes and volume mounts can be specified as server deployer properties as well as app deployment properties specified
+at deployment time. Both ways of defining the volumes and volume mounts are identical, where they are specified as a JSON
+representation of the kubernetes-client model.
+
+NOTE: Volumes and volume mounts defined at deployer level will be added to _all_ deployed apps. This is handy for
+common shared folders that should be available to all apps.
+
+Below is an example of a volumes and volume mounts defined as a server deployer property in the ConfigMap:
+
+[source,yaml]
+----
+spring.cloud.deployer.openshift:
+  volumes:
+    - name: testhostpath
+      hostPath:
+        path: /test/hostPath
+
+    - name: testpvc
+      persistentVolumeClaim:
+        claimName: testClaim
+        readOnly: true
+
+    - name: testnfs
+      nfs:
+        server: 10.0.0.1:111
+        path: /test/nfs
+
+  volumeMounts:
+    - name: testhostpath:
+      mountPath: /test/hostPath
+
+    - name: testpvc:
+      mountPath: /test/pvc
+
+    - name: testnfs:
+      mountPath: /test/nfs
+      readOnly: true
+----
+
+NOTE: The default value for `readOnly` is `false`. I.e. Container requests read/write access.
+
+Examples of the deployment property (via the Data Flow Shell) variation of defining volumes and volume mounts below:
+
+[source,console]
+----
+dataflow:>stream create --name test --definition "time | file"
+Created new stream 'timezoney'
+
+dataflow:>stream deploy test --properties "app.file.spring.cloud.deployer.openshift.deployment.volumes=[{name: testhostpath, hostPath: { path: '/test/override/hostPath' }}],spring.cloud.deployer.openshift.deployment.volumeMounts=[{name: 'testhostpath', mountPath: '/test/hostPath'}]"
+----

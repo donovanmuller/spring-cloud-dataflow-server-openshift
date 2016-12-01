@@ -1,0 +1,31 @@
+[[server]]
+= Server Implementation
+
+== Server Properties
+
+The Spring Data Flow Server for OpenShift is a specialisation of the Spring Cloud Data Flow Server for Kubernetes.
+Therefore, all properties supported by the Kubernetes Server are supported by the OpenShift server.
+
+IMPORTANT: The `spring.cloud.deployer.kubernetes` prefix should be replaced with `spring.cloud.deployer.openshift`.
+
+See http://docs.spring.io/spring-cloud-dataflow-server-kubernetes/docs/{scdf-server-kubernetes-version}/reference/html/[Data Flow Server for Kubernetes] reference documentation for supported properties.
+
+=== OpenShift Specific Properties
+
+The following properties are specific to the Data Flow OpenShift Server.
+
+|===
+|Name |Usage Example |Description
+
+|Force Build
+|`spring.cloud.deployer.openshift.forceBuild=true`
+|Ignore the build hashing feature when deploying streams and always trigger a new build for Maven based apps
+
+|Default Routing Subdomain
+|`spring.cloud.deployer.openshift.defaultRoutingSubdomain=oscp.mydomain.com`
+|Provide the https://docs.openshift.org/latest/install_config/router/default_haproxy_router.html#customizing-the-default-routing-subdomain[routing subdomain] used when building Route URL's.
+
+|Default Image Tag
+|`spring.cloud.deployer.openshift.defaultImageTag=latest`
+|The default Docker image tag to be used when creating Build and DeploymentConfig resources
+|===

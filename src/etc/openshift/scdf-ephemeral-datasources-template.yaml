@@ -1,0 +1,358 @@
+apiVersion: v1
+kind: Template
+metadata:
+  name: "spring-cloud-dataflow-server-openshift-ephemeral-datasources"
+  annotations:
+    openshift.io/display-name: "Spring Cloud Data Flow Server for OpenShift with ephemeral datasources Template"
+    description: |-
+      A Spring Cloud Data Flow Server for OpenShift template.
+      This template deploys the Data Flow Server, an ephemeral MySQL container and ephemeral Redis container.
+      These resources sare configured by means of the ConfigMap.
+    iconClass: "icon-spring"
+message: |-
+  Spring Cloud Data Flow Server for OpenShift, MySQL and Redis are being deployed...
+  MySQL password is: ${DEPLOYER_DATASOURCE_PASSWORD}
+labels:
+  template: "scdf-ephemeral"
+objects:
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: scdf-ephemeral-config
+    data:
+      application.yaml: |-
+        health.config.enabled: ${ENABLE_CONFIG_SERVER}
+
+        spring:
+          cloud:
+            deployer:
+              openshift:
+                environmentVariables: '${DEPLOYER_ENVIRONMENT_VARIABLES}'
+          datasource:
+            url: jdbc:mysql://${MYSQL_SERVICE_HOST}:${MYSQL_SERVICE_PORT}/scdf
+            driverClassName: org.mariadb.jdbc.Driver
+            testOnBorrow: true
+            validationQuery: "SELECT 1"
+          redis:
+            host: ${REDIS_SERVICE_HOST}
+            port: ${REDIS_SERVICE_PORT}
+
+        # Currently only support for one additional remote Maven repository
+        # If additional repositories or more advanced configurations are required, please make use of the SPRING_APPLICATION_JSON parameter
+        maven:
+          resolvePom: ${REMOTE_MAVEN_REPO_RESOLVE_POM}
+          remote-repositories.${REMOTE_MAVEN_REPO_NAME}:
+            url: ${REMOTE_MAVEN_REPO_URL}
+            auth:
+              username: ${REMOTE_MAVEN_REPO_AUTH_USERNAME}
+              password: ${REMOTE_MAVEN_REPO_AUTH_PASSWORD}
+  - apiVersion: v1
+    kind: Secret
+    metadata:
+      name: scdf-secrets
+    # The below values will be Base64 encoded when created
+    # See: https://docs.openshift.org/latest/dev_guide/secrets.html#overview
+    stringData:
+      spring.datasource.username: ${DEPLOYER_DATASOURCE_USERNAME}
+      spring.datasource.password: ${DEPLOYER_DATASOURCE_PASSWORD}
+  - apiVersion: v1
+    kind: DeploymentConfig
+    metadata:
+      name: "scdf-ephemeral"
+    spec:
+      triggers:
+        - type: ConfigChange
+      replicas: 1
+      selector:
+        name: "scdf-ephemeral"
+      template:
+        metadata:
+          labels:
+            name: "scdf-ephemeral"
+        spec:
+          containers:
+            - name: "scdf-ephemeral"
+              image: "donovanmuller/spring-cloud-dataflow-server-openshift:1.1.0.RELEASE"
+              env:
+                - name: KUBERNETES_NAMESPACE
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: "metadata.namespace"
+                - name: JAVA_OPTS
+                  value: ${JAVA_OPTS}
+                - name: SPRING_CLOUD_CONFIG_SERVER_BOOTSTRAP
+                  value: ${ENABLE_CONFIG_SERVER}
+                - name: SPRING_CLOUD_DATAFLOW_FEATURES_ANALYTICS_ENABLED
+                  value: ${ENABLE_ANALYTICS}
+                - name: SPRING_CLOUD_DEPLOYER_OPENSHIFT_REQUESTS_MEMORY
+                  value: ${DEPLOYER_REQUESTS_MEMORY}
+                - name: SPRING_CLOUD_DEPLOYER_OPENSHIFT_LIMITS_MEMORY
+                  value: ${DEPLOYER_LIMITS_MEMORY}
+                - name: SPRING_CLOUD_DEPLOYER_OPENSHIFT_REQUESTS_CPU
+                  value: ${DEPLOYER_REQUESTS_CPU}
+                - name: SPRING_CLOUD_DEPLOYER_OPENSHIFT_LIMITS_CPU
+                  value: ${DEPLOYER_LIMITS_CPU}
+                - name: SPRING_APPLICATION_JSON
+                  value: ${SPRING_APPLICATION_JSON}
+                - name: SPRING_CLOUD_KUBERNETES_SECRETS_ENABLE_API
+                  value: "true"
+                - name: SPRING_CLOUD_KUBERNETES_SECRETS_NAME
+                  value: scdf-secrets
+                - name: SPRING_CLOUD_KUBERNETES_CONFIG_NAME
+                  value: scdf-ephemeral-config
+              ports:
+                - name: http
+                  containerPort: ${SERVER_PORT}
+              readinessProbe:
+                httpGet:
+                  path: /management/info
+                  # unfortunately we cannot use ${SERVER_PORT} here because of https://github.com/openshift/origin/pull/11421
+                  # OpenShift Origin 1.4 should fix this
+                  port: 9393
+                  scheme: HTTP
+                initialDelaySeconds: 40
+                timeoutSeconds: 10
+              livenessProbe:
+                httpGet:
+                  path: /management/health
+                  # unfortunately we cannot use ${SERVER_PORT} here because of https://github.com/openshift/origin/pull/11421
+                  # OpenShift Origin 1.4 should fix this
+                  port: 9393
+                  scheme: HTTP
+                initialDelaySeconds: 40
+                timeoutSeconds: 10
+              resources:
+                limits:
+                  cpu: ${DEPLOYER_SERVER_LIMITS_CPU}
+                  memory: ${DEPLOYER_SERVER_LIMITS_MEMORY}
+                requests:
+                  cpu: ${DEPLOYER_SERVER_REQUESTS_CPU}
+                  memory: ${DEPLOYER_SERVER_REQUESTS_MEMORY}
+          restartPolicy: Always
+          serviceAccount: scdf
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      labels:
+        name: "scdf-ephemeral"
+      name: "scdf-ephemeral"
+      annotations:
+        service.alpha.openshift.io/dependencies: '[{"name": "mysql","kind": "Service"},{"name": "redis","kind": "Service"}]'
+    spec:
+      template:
+        metadata:
+          labels:
+            name: "scdf-ephemeral"
+      ports:
+        - name: http
+          port: ${SERVER_PORT}
+          targetPort: http
+      selector:
+        name: "scdf-ephemeral"
+  - apiVersion: v1
+    kind: Route
+    metadata:
+      name: "scdf-ephemeral"
+    spec:
+      host: ${ROUTE_HOST}
+      template:
+        metadata:
+          labels:
+            name: "scdf-ephemeral"
+      to:
+        kind: Service
+        name: "scdf-ephemeral"
+      port:
+        targetPort: http
+  - apiVersion: v1
+    kind: DeploymentConfig
+    metadata:
+      name: mysql
+    spec:
+      triggers:
+        - type: ConfigChange
+      replicas: 1
+      selector:
+        name: mysql
+      template:
+        metadata:
+          labels:
+            name: mysql
+        spec:
+          containers:
+            - name: mysql
+              image: mysql:5.6
+              env:
+                - name: MYSQL_RANDOM_ROOT_PASSWORD
+                  value: "true"
+                - name: MYSQL_USER
+                  value: ${DEPLOYER_DATASOURCE_USERNAME}
+                - name: MYSQL_PASSWORD
+                  value: ${DEPLOYER_DATASOURCE_PASSWORD}
+                - name: MYSQL_DATABASE
+                  value: scdf
+              ports:
+                - name: mysql
+                  containerPort: 3306
+              readinessProbe:
+                tcpSocket:
+                  port: 3306
+                initialDelaySeconds: 5
+                timeoutSeconds: 5
+              livenessProbe:
+                tcpSocket:
+                  port: 3306
+                initialDelaySeconds: 5
+                timeoutSeconds: 5
+          restartPolicy: Always
+          serviceAccount: scdf
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      labels:
+        name: "mysql"
+      name: "mysql"
+    spec:
+      template:
+        metadata:
+          labels:
+            name: "mysql"
+      ports:
+        - name: mysql
+          port: 3306
+          targetPort: mysql
+      selector:
+        name: "mysql"
+  - apiVersion: v1
+    kind: DeploymentConfig
+    metadata:
+      name: redis
+    spec:
+      triggers:
+        - type: ConfigChange
+      replicas: 1
+      selector:
+        name: redis
+      template:
+        metadata:
+          labels:
+            name: redis
+        spec:
+          containers:
+            - name: redis
+              image: redis:3-alpine
+              ports:
+                - name: redis
+                  containerPort: 6379
+              readinessProbe:
+                tcpSocket:
+                  port: 6379
+                initialDelaySeconds: 5
+                timeoutSeconds: 5
+              livenessProbe:
+                tcpSocket:
+                  port: 6379
+                initialDelaySeconds: 5
+                timeoutSeconds: 5
+          restartPolicy: Always
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      labels:
+        name: "redis"
+      name: "redis"
+    spec:
+      template:
+        metadata:
+          labels:
+            name: "redis"
+      ports:
+        - name: redis
+          port: 6379
+          targetPort: redis
+      selector:
+        name: "redis"        
+parameters:
+  - name: JAVA_OPTS
+    displayName: Options to customise the Java runtime
+    description: Options to customise the Java runtime. E.g. -Xms512m -Xmx512m
+    value: "-Xms128m -Xmx384m"
+  - name: ENABLE_CONFIG_SERVER
+    displayName: Enable Spring Cloud Config Server
+    description: "Flag (true/false) indicating whether to enable Spring Cloud Config Server support"
+    value: "false"
+  - name: ENABLE_ANALYTICS
+    displayName: Enable Spring Cloud Data Flow Analytics
+    description: "Flag (true/false) indicating whether to enable the analytics feature. See http://docs.spring.io/spring-cloud-dataflow/docs/1.1.0.RELEASE/reference/html/arch-analytics.html"
+    value: "true"
+    required: true
+  - name: DEPLOYER_REQUESTS_MEMORY
+    displayName: Default memory request for a Pod
+    description: "The default memory request for a Pod. See https://docs.openshift.org/latest/dev_guide/compute_resources.html#dev-compute-resources"
+    value: "256Mi"
+  - name: DEPLOYER_REQUESTS_CPU
+    displayName: Default CPU request for a Pod
+    description: "The default CPU request for a Pod. See https://docs.openshift.org/latest/dev_guide/compute_resources.html#dev-compute-resources"
+    value: "500m"
+  - name: DEPLOYER_LIMITS_MEMORY
+    displayName: Default memory limit for a Pod
+    description: "The default memory limit for a Pod. See https://docs.openshift.org/latest/dev_guide/compute_resources.html#dev-compute-resources"
+    value: "512Mi"
+  - name: DEPLOYER_LIMITS_CPU
+    displayName: Default CPU limit for a Pod
+    description: "The default CPU limit for a Pod. See https://docs.openshift.org/latest/dev_guide/compute_resources.html#dev-compute-resources"
+    value: "1000m"
+  - name: DEPLOYER_SERVER_REQUESTS_MEMORY
+    displayName: Default memory request for the Data Flow Server
+    description: "The default memory request for the Data Flow Server. See https://docs.openshift.org/latest/dev_guide/compute_resources.html#dev-compute-resources"
+    value: "256Mi"
+  - name: DEPLOYER_SERVER_REQUESTS_CPU
+    displayName: Default CPU request for the Data Flow Server
+    description: "The default CPU request for the Data Flow Server. See https://docs.openshift.org/latest/dev_guide/compute_resources.html#dev-compute-resources"
+    value: "500m"
+  - name: DEPLOYER_SERVER_LIMITS_MEMORY
+    displayName: Default memory limit for the Data Flow Server
+    description: "The default memory limit for the Data Flow Server. See https://docs.openshift.org/latest/dev_guide/compute_resources.html#dev-compute-resources"
+    value: "1024Mi"
+  - name: DEPLOYER_SERVER_LIMITS_CPU
+    displayName: Default CPU limit for the Data Flow Server
+    description: "The default CPU limit for the Data Flow Server. See https://docs.openshift.org/latest/dev_guide/compute_resources.html#dev-compute-resources"
+    value: "1000m"
+  - name: SPRING_APPLICATION_JSON
+    displayName: Spring Application JSON for addtional advanced configurations
+    description: "Specified as a single line JSON document. See http://docs.spring.io/spring-boot/docs/current/reference/html/boot-features-external-config.html"
+  - name: REMOTE_MAVEN_REPO_NAME
+    displayName: Remote Maven repository name
+    description: "The name of a remote Maven repository. See http://docs.spring.io/spring-cloud-dataflow/docs/current/reference/html/getting-started-deploying-spring-cloud-dataflow.html#getting-started-deploying-spring-cloud-dataflow"
+    value: "spring"
+  - name: REMOTE_MAVEN_REPO_URL
+    displayName: Remote Maven repository URL
+    description: "The URL of a remote Maven repository from which maven:// resources will be resolved. See http://docs.spring.io/spring-cloud-dataflow/docs/current/reference/html/getting-started-deploying-spring-cloud-dataflow.html#getting-started-deploying-spring-cloud-dataflow"
+    value: "http://repo.spring.io/libs-snapshot"
+  - name: REMOTE_MAVEN_REPO_AUTH_USERNAME
+    displayName: Remote Maven repository username
+    description: "The username to authenticate with the remote Maven repository. See http://docs.spring.io/spring-cloud-dataflow/docs/current/reference/html/getting-started-deploying-spring-cloud-dataflow.html#getting-started-deploying-spring-cloud-dataflow"
+  - name: REMOTE_MAVEN_REPO_AUTH_PASSWORD
+    displayName: Remote Maven repository password
+    description: "The password to authenticate with the remote Maven repository. See http://docs.spring.io/spring-cloud-dataflow/docs/current/reference/html/getting-started-deploying-spring-cloud-dataflow.html#getting-started-deploying-spring-cloud-dataflow"
+  - name: REMOTE_MAVEN_REPO_RESOLVE_POM
+    displayName: In addition to the Jar artifact, resolve the POM artifact
+    description: "The POM artifact contains project metadata that is necessary depending on the build strategy chosen"
+    value: "true"
+  - name: SERVER_PORT
+    displayName: The port to listen for HTTP traffic
+    description: The Spring Boot server.port value. See http://docs.spring.io/spring-boot/docs/current/reference/htmlsingle/#howto-change-the-http-port
+    value: "9393"
+    required: true
+  - name: DEPLOYER_DATASOURCE_USERNAME
+    displayName: Datasource username
+    description: The Spring datasource username
+    value: "scdf"
+  - name: DEPLOYER_DATASOURCE_PASSWORD
+    displayName: Datasource password
+    description: "The Spring datasource password. Note: This password is generated"
+    generate: expression
+    from: "[a-zA-Z0-9]{16}"
+  - name: ROUTE_HOST
+    displayName: The OpenShift Route host value
+    description: A explicit Route host value, otherise the default is used. See https://docs.openshift.org/latest/dev_guide/routes.html

@@ -1,0 +1,75 @@
+[[deployment]]
+= Deployment Properties
+
+[partintro]
+--
+The following deployment properties are supported by the Data Flow Server for OpenShift.
+These properties are passed as deployment properties when deploying streams or tasks.
+Below is an example of deploying a stream definition:
+
+[source,console]
+----
+dataflow:>stream create --name test --definition "time | custom | log"
+Created new stream 'test'
+
+dataflow:>stream deploy test --properties "app.custom.spring.cloud.deployer.openshift.defaultDockerfile=Dockerfile.nexus"
+Deployment request has been sent for stream 'test'
+----
+
+Note the deployment property `app.custom.spring.cloud.deployer.openshift.defaultDockerfile=Dockerfile.nexus`.
+--
+
+== Supported Deployment Properties
+
+[cols="1,1,2", options="header"]
+|===
+|Name |Usage Example |Description
+
+|Force Build
+|spring.cloud.deployer.openshift.forceBuild=true
+|A flag (true/false) indicating whether to ignore the build hashing feature when deploying streams and always trigger a new build for Maven based apps
+
+|Servie Account
+|spring.cloud.deployer.openshift.deployment.service.account=scdf
+|OpenShift https://docs.openshift.org/latest/dev_guide/service_accounts.html[ServiceAccount] that containers should run under
+
+|Docker Image Tag
+|spring.cloud.deployer.openshift.image.tag=latest
+|The Docker image tag for the https://docs.openshift.org/latest/architecture/core_concepts/builds_and_image_streams.html#image-streams[Image Stream] used when creating the https://docs.openshift.org/latest/dev_guide/deployments/how_deployments_work.html[Deployment]
+
+|Inline Dockerfile
+|spring.cloud.deployer.openshift.deployment.dockerfile='FROM java:8\nRUN echo "Custom Dockerfile..."'
+|An inline https://docs.docker.com/engine/reference/builder/[Dockerfile] that will be used to build the Docker image. Only applicable to Maven resource apps
+
+|Default Provided Dockerfile
+|spring.cloud.deployer.openshift.deployment.nodeSelector=region: primary,role: streams
+|A comma separated list of node selectors (in the form name: value) which will determine where the app's Pod's https://docs.openshift.org/latest/dev_guide/deployments/basic_deployment_operations.html#assigning-pods-to-specific-nodes[get assigned]
+
+|Default Provided Dockerfile
+|spring.cloud.deployer.openshift.defaultDockerfile=Dockerfile.nexus
+|Specify which default Dockerfile to use when building Docker images. There are currently two supported default Dockerfiles
+
+|Create Route
+|spring.cloud.deployer.openshift.createRoute=true
+|A flag (true/false) indicating whether a https://docs.openshift.org/latest/dev_guide/routes.html[Route] should be created for the app. Analogous to spring.cloud.deployer.kubernetes.createLoadBalancer
+
+|Route Host Name
+|spring.cloud.deployer.openshift.deployment.route.host=myapp.mycompany.com
+|Provide a https://docs.openshift.org/latest/dev_guide/routes.html[Route] Host value that will the created Route will expose as the URL to the app
+
+|Volume Mounts
+|spring.cloud.deployer.openshift.deployment.volumeMounts=[{name: 'testhostpath', mountPath: '/test/hostPath'}, {name: 'testpvc', mountPath: '/test/pvc'}, {name: 'testnfs', mountPath: '/test/nfs'}]
+|A list of https://github.com/fabric8io/kubernetes-model[kubernetes-model] supported volume mounts. Specified as a JSON representation
+
+|Volumes
+|spring.cloud.deployer.openshift.deployment.volumes=[{name: testhostpath, hostPath: { path: '/test/override/hostPath' }}, {name: 'testpvc', persistentVolumeClaim: { claimName: 'testClaim', readOnly: 'true' }}, {name: 'testnfs', nfs: { server: '10.0.0.1:111', path: '/test/nfs' }}]
+|A list of https://github.com/fabric8io/kubernetes-model[kubernetes-model] supported volumes. Specified as a JSON representation. Volumes must have corresponding volume mounts, otherwise they will be ignored
+
+|Labels
+|spring.cloud.deployer.openshift.deployment.labels=project=test,team=a-team
+|A comma separated list of labels (in the form name=value) that will be added to the app
+
+|Create Node Port
+|spring.cloud.deployer.openshift.createNodePort=true
+|Create a NodePort instead of a Route. Either "true" or a number at deployment time. The value "true" will choose a random port. If a number is given it must be in the range that is configured for the cluster (service-node-port-range, default is 30000-32767)
+|===

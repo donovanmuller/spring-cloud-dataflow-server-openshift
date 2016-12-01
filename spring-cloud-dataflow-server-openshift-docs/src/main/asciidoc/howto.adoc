@@ -1,0 +1,196 @@
+[[howto]]
+= '`How-to`' guides
+
+[partintro]
+--
+This section provides answers to some common '`how do I do that...`' type of questions
+that often arise when using Spring Cloud Data Flow.
+--
+
+== Deploying Custom Stream App as a Maven Resource
+
+This section walks you through deploying a simple Spring Cloud Stream based application, packaged as a Maven artifact, to OpenShift.
+The source code for this app is available in the following https://github.com/donovanmuller/timezone-processor-kafka[GitHub repository].
+
+This guide assumes that you have gone through the <<getting-started>> section and are using a local minishift
+instance of OpenShift. Adjust the steps accordingly if you are using an existing OpenShift cluster.
+
+=== Deploy a Nexus Repository
+
+For OpenShift to build the Docker image that will be deployed, it must be able to resolve and download the custom app's Jar artifact.
+This means that the custom app must be deployed to an accessible Maven repository.
+
+Assuming the local minishift OpenShift environment discussed in the <<getting-started>> section, we will deploy
+a Nexus container to which we can deploy our custom application. Deploying the Nexus image is trivial thanks to
+an OpenShift template https://github.com/donovanmuller/spring-cloud-dataflow-server-openshift/{scdf-server-openshift-version}/src/etc/openshift/nexus-template.yaml[available here].
+
+NOTE: Make sure you have configured the `scdf` Service Account mentioned in the <<getting-started>> section, as this account is
+used by the Nexus deployment.
+
+Using the `oc` tool, upload the Nexus template with:
+
+[subs="attributes"]
+[source,console]
+----
+$ oc create -f https://raw.githubusercontent.com/donovanmuller/spring-cloud-dataflow-server-openshift/{scdf-server-openshift-version}/src/etc/openshift/nexus-template.yaml
+...
+----
+
+Once uploaded, open the OpenShift Console (you can use `minishift console`), authenticate and navigate to the `scdf` project.
+Then click _Add to Project_ and select the `nexus` template:
+
+image::{scdf-server-openshift-asciidoc}/images/scdf-openshift-nexus-template.png[Data Flow Server template]
+
+The default configurations should be sane. However, you must provide the *The OpenShift Route host value*.
+This value will depend on your minishift and OpenShift Router environment but should be similar to
+`nexus-scdf.192.168.64.15.xip.io`. Where `-scdf.192.168.64.15.xip.io` is the project name (`scdf`) and
+the default routing subdomain (`192.168.64.15.xip.io`).
+
+image::{scdf-server-openshift-asciidoc}/images/scdf-openshift-nexus-route.png[Data Flow Server route configuration]
+
+Click _Create_ when you're happy with the configuration.
+Wait for the Nexus image to be pulled and the deployment to be successful. Once the Pod has been scaled successfully
+you should be able to access the Nexus UI by clicking on the Route URL (http://nexus-scdf.192.168.64.15.xip.io in this example).
+
+TIP: The default credential for Nexus is `admin`/`admin123` or `deployment`/`deployment123`
+
+=== Configuring the Data Flow Server for OpenShift
+
+We need to configure the Data Flow Server to use this new Nexus instance as a remote Maven repository.
+If you have an existing deployment from the <<getting-started>> section you will have to change it's configuration.
+
+There are a few ways to do that but the way described here is to remove the existing deployment and use the
+existing https://github.com/donovanmuller/spring-cloud-dataflow-server-openshift/{scdf-server-openshift-version}/src/etc/openshift/scdf-ephemeral-datasources-kafka-template.yaml[Data Flow Server with ephemeral Datasources and Kafka binder] template
+to deploy the updated configuration.
+
+Remove the current environment using the `oc` tool (assuming you used the Kafka template):
+
+[source,console]
+----
+$ oc delete all --selector=template=scdf-kafka
+$ oc delete cm --selector=template=scdf-kafka
+$ oc delete secret --selector=template=scdf-kafka
+----
+
+Next click _Add to Project_ and select the `spring-cloud-dataflow-server-openshift-ephemeral-kafka` template.
+Use the following values for the Maven configuration items:
+
+|===
+|Configuration Parameter |Value
+
+|Remote Maven repository name
+|nexus
+
+|Remote Maven repository URL
+|http://nexus-scdf.192.168.64.15.xip.io/content/groups/public (use your Route URL for Nexus here)
+
+|Remote Maven repository username
+|deployment
+
+|Remote Maven repository password
+|deployment123
+|===
+
+image::{scdf-server-openshift-asciidoc}/images/scdf-openshift-maven.png[Data Flow Server Maven configuration]
+
+Click _Create_ and wait for the deployment to complete successfully.
+
+=== Cloning and Deploying the App
+
+Next step is to deploy our custom app into the Nexus instance.
+First though, we need to clone the custom app source.
+
+[source,console]
+----
+$ git clone https://github.com/donovanmuller/timezone-processor-kafka.git
+$ cd timezone-processor-kafka
+----
+
+Next we deploy the application into our Nexus repository with
+
+[source,console]
+----
+$ ./mvnw -s .settings.xml deploy -Dnexus.url=http://nexus-scdf.192.168.64.15.xip.io/content/repositories/snapshots
+...
+Uploading: http://nexus-scdf.192.168.64.15.xip.io/content/repositories/snapshots/io/switchbit/timezone-processor-kafka/maven-metadata.xml
+Uploaded: http://nexus-scdf.192.168.64.15.xip.io/content/repositories/snapshots/io/switchbit/timezone-processor-kafka/maven-metadata.xml (294 B at 6.0 KB/sec)
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time: 13.156 s
+[INFO] Finished at: 2016-11-30T20:42:54+02:00
+[INFO] Final Memory: 35M/302M
+[INFO] ------------------------------------------------------------------------
+----
+
+IMPORTANT: Substitute the value for `-Dnexus.url` with the URL matching your Nexus instance.
+
+=== Deploying the Stream
+
+Now that our custom app is ready, let's register it with the Data Flow Server.
+Using the Data Flow Shell, targeted to our OpenShift deployed instance, register the `timezone` app with:
+
+[source,console]
+----
+dataflow:>app register --name timezone --type processor --uri maven://io.switchbit:timezone-processor-kafka:1.0-SNAPSHOT
+Successfully registered application 'processor:timezone'
+----
+
+[NOTE]
+====
+The assumption is that the out-of-the-box apps have been imported previously as part of the <<getting-started>> section.
+If the apps are not imported, import them now with:
+
+[source,console]
+----
+dataflow:>app import --uri http://bit.ly/stream-applications-kafka-docker
+----
+
+It does not really matter whether the Docker or Maven out-of-the-box apps are registered.
+====
+
+Now we can define a stream using our timezone processor with:
+
+[source,console]
+----
+dataflow:>stream create --name timezoney --definition "time | timezone | log"
+Created new stream 'timezoney'
+----
+
+and deploy it with:
+
+[source,console]
+----
+dataflow:>stream deploy timezoney --properties "app.timezone.timezone=Africa/Johannesburg,app.timezone.spring.cloud.deployer.openshift.defaultDockerfile=Dockerfile.nexus"
+Deployment request has been sent for stream 'timezoney'
+----
+
+NOTE: We provide two deployment properties to the `timezone` app. The first is the required timezone to convert the input times.
+The second is to inform the Data Flow Server that it should use the provided default Dockerfile (`Dockerfile.nexus`) that supports Nexus repositories,
+instead of the default `Docker.artifactory`.
+
+You should see a build being triggered for the `timezone` app, which will download the `timezone-processor-kafka`
+Maven artifact from the Nexus repository and build the Docker image. Once the build is successful, the app will be deployed
+alongside the other apps.
+
+image::{scdf-server-openshift-asciidoc}/images/scdf-openshift-custom-app-deployed.png[timezoney stream deployed]
+
+View both the `timezoney-timezone-0` and `timezoney-log-0` apps for the expected log outputs.
+
+image::{scdf-server-openshift-asciidoc}/images/scdf-openshift-custom-app-timezone.png[timezoney stream logs]
+
+image::{scdf-server-openshift-asciidoc}/images/scdf-openshift-custom-app-log.png[timezoney stream logs]
+
+Once you're done, destroy the stream with:
+
+[source,console]
+----
+dataflow:>stream destroy timezoney
+Destroyed stream 'timezoney'
+----
+
+
+
+
+
+

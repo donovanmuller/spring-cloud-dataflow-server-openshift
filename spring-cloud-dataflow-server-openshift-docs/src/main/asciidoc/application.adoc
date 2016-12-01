@@ -1,0 +1,40 @@
+[[application]]
+= Application Properties
+
+[partintro]
+--
+The following application properties are supported by the Data Flow Server for OpenShift.
+These properties are passed as application properties when defining streams or tasks.
+Below is an example of defining a stream:
+
+[source,console]
+----
+dataflow:>stream create --name test --definition "time | custom --spring.cloud.deployer.openshift.build.git.uri=https://github.com/donovanmuller/timely-application-group.git | log"
+Created new stream 'test'
+----
+
+Note the application property `spring.cloud.deployer.openshift.build.git.uri=https://github.com/donovanmuller/timely-application-group.git`.
+--
+
+== Supported Application Properties
+
+[cols="1,1,2", options="header"]
+|===
+|Name |Usage Example |Description
+
+|Build Git URI
+|spring.cloud.deployer.openshift.build.git.uri=https://github.com/donovanmuller/timely-application-group.git
+|The Git remote repository URI that will contain a Dockerfile in `src/main/docker` of that repository. See https://docs.openshift.org/latest/dev_guide/builds.html#source-code[here]
+
+|Git Branch Reference
+|spring.cloud.deployer.openshift.build.git.ref=master
+|The Git branch/reference for the repository specified by `spring.cloud.deployer.openshift.build.git.uri`. See https://docs.openshift.org/latest/dev_guide/builds.html#source-code[here]
+
+|Dockerfile Path
+|spring.cloud.deployer.openshift.build.git.dockerfile=src/main/docker
+|The location, relative to the project root of the Git repository, where the Dockerfile is located.
+
+|Git Repository Secret
+|spring.cloud.deployer.openshift.build.git.secret=github-secret
+|If the remote Git repository requires authentication, use this secret. See https://docs.openshift.org/latest/dev_guide/builds.html#using-secrets[here]
+|===

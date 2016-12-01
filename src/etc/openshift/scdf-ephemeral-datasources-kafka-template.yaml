@@ -1,0 +1,481 @@
+apiVersion: v1
+kind: Template
+metadata:
+  name: "spring-cloud-dataflow-server-openshift-ephemeral-kafka"
+  annotations:
+    openshift.io/display-name: "Spring Cloud Data Flow Server for OpenShift with ephemeral datasources and Kafka Template"
+    description: |-
+      A Spring Cloud Data Flow Server for OpenShift template.
+      This template deploys the Data Flow Server, an ephemeral MySQL container, an ephemeral Redis container and a Kafka environment.
+      These resources sare configured by means of the ConfigMap.
+    iconClass: "icon-spring"
+message: |-
+  Spring Cloud Data Flow Server for OpenShift, MySQL, Redis and Kafka are being deployed...
+  MySQL password is: ${DEPLOYER_DATASOURCE_PASSWORD}
+labels:
+  template: "scdf-kafka"
+objects:
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: scdf-kafka-config
+    data:
+      application.yaml: |-
+        health.config.enabled: ${ENABLE_CONFIG_SERVER}
+
+        spring:
+          cloud:
+            deployer:
+              openshift:
+                environmentVariables: 'SPRING_CLOUD_STREAM_KAFKA_BINDER_BROKERS=${KAFKA_SERVICE_HOST}:${KAFKA_SERVICE_PORT},SPRING_CLOUD_STREAM_KAFKA_BINDER_ZK_NODES=${KAFKA_ZK_SERVICE_HOST}:${KAFKA_ZK_SERVICE_PORT},SPRING_REDIS_HOST=${REDIS_SERVICE_HOST},SPRING_REDIS_PORT=${REDIS_SERVICE_PORT}'
+          datasource:
+            url: jdbc:mysql://${MYSQL_SERVICE_HOST}:${MYSQL_SERVICE_PORT}/scdf
+            driverClassName: org.mariadb.jdbc.Driver
+            testOnBorrow: true
+            validationQuery: "SELECT 1"
+          redis:
+            host: ${REDIS_SERVICE_HOST}
+            port: ${REDIS_SERVICE_PORT}
+
+        # Currently only support for one additional remote Maven repository
+        # If additional repositories or more advanced configurations are required, please make use of the SPRING_APPLICATION_JSON parameter
+        maven:
+          resolvePom: ${REMOTE_MAVEN_REPO_RESOLVE_POM}
+          remote-repositories.${REMOTE_MAVEN_REPO_NAME}:
+            url: ${REMOTE_MAVEN_REPO_URL}
+            auth:
+              username: ${REMOTE_MAVEN_REPO_AUTH_USERNAME}
+              password: ${REMOTE_MAVEN_REPO_AUTH_PASSWORD}
+  - apiVersion: v1
+    kind: Secret
+    metadata:
+      name: scdf-secrets
+    # The below values will be Base64 encoded when created
+    # See: https://docs.openshift.org/latest/dev_guide/secrets.html#overview
+    stringData:
+      spring.datasource.username: ${DEPLOYER_DATASOURCE_USERNAME}
+      spring.datasource.password: ${DEPLOYER_DATASOURCE_PASSWORD}
+  - apiVersion: v1
+    kind: DeploymentConfig
+    metadata:
+      name: "scdf-kafka"
+    spec:
+      triggers:
+        - type: ConfigChange
+      replicas: 1
+      selector:
+        name: "scdf-kafka"
+      template:
+        metadata:
+          labels:
+            name: "scdf-kafka"
+        spec:
+          containers:
+            - name: "scdf-kafka"
+              image: "donovanmuller/spring-cloud-dataflow-server-openshift:1.1.0.RELEASE"
+              env:
+                - name: KUBERNETES_NAMESPACE
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: "metadata.namespace"
+                - name: JAVA_OPTS
+                  value: ${JAVA_OPTS}
+                - name: SPRING_CLOUD_CONFIG_SERVER_BOOTSTRAP
+                  value: ${ENABLE_CONFIG_SERVER}
+                - name: SPRING_CLOUD_DATAFLOW_FEATURES_ANALYTICS_ENABLED
+                  value: ${ENABLE_ANALYTICS}
+                - name: SPRING_CLOUD_DEPLOYER_OPENSHIFT_REQUESTS_MEMORY
+                  value: ${DEPLOYER_REQUESTS_MEMORY}
+                - name: SPRING_CLOUD_DEPLOYER_OPENSHIFT_LIMITS_MEMORY
+                  value: ${DEPLOYER_LIMITS_MEMORY}
+                - name: SPRING_CLOUD_DEPLOYER_OPENSHIFT_REQUESTS_CPU
+                  value: ${DEPLOYER_REQUESTS_CPU}
+                - name: SPRING_CLOUD_DEPLOYER_OPENSHIFT_LIMITS_CPU
+                  value: ${DEPLOYER_LIMITS_CPU}
+                - name: SPRING_APPLICATION_JSON
+                  value: ${SPRING_APPLICATION_JSON}
+                - name: SPRING_CLOUD_KUBERNETES_SECRETS_ENABLE_API
+                  value: "true"
+                - name: SPRING_CLOUD_KUBERNETES_SECRETS_NAME
+                  value: scdf-secrets
+                - name: SPRING_CLOUD_KUBERNETES_CONFIG_NAME
+                  value: scdf-kafka-config
+              ports:
+                - name: http
+                  containerPort: ${SERVER_PORT}
+              readinessProbe:
+                httpGet:
+                  path: /management/info
+                  # unfortunately we cannot use ${SERVER_PORT} here because of https://github.com/openshift/origin/pull/11421
+                  # OpenShift Origin 1.4 should fix this
+                  port: 9393
+                  scheme: HTTP
+                initialDelaySeconds: 40
+                timeoutSeconds: 10
+              livenessProbe:
+                httpGet:
+                  path: /management/health
+                  # unfortunately we cannot use ${SERVER_PORT} here because of https://github.com/openshift/origin/pull/11421
+                  # OpenShift Origin 1.4 should fix this
+                  port: 9393
+                  scheme: HTTP
+                initialDelaySeconds: 40
+                timeoutSeconds: 10
+              resources:
+                limits:
+                  cpu: ${DEPLOYER_SERVER_LIMITS_CPU}
+                  memory: ${DEPLOYER_SERVER_LIMITS_MEMORY}
+                requests:
+                  cpu: ${DEPLOYER_SERVER_REQUESTS_CPU}
+                  memory: ${DEPLOYER_SERVER_REQUESTS_MEMORY}
+          restartPolicy: Always
+          serviceAccount: scdf
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      labels:
+        name: "scdf-kafka"
+      name: "scdf-kafka"
+      annotations:
+        service.alpha.openshift.io/dependencies: '[{"name": "mysql","kind": "Service"},{"name": "redis","kind": "Service"},{"name": "kafka-zk","kind": "Service"},{"name": "kafka","kind": "Service"}]'
+    spec:
+      template:
+        metadata:
+          labels:
+            name: "scdf-kafka"
+      ports:
+        - name: http
+          port: ${SERVER_PORT}
+          targetPort: http
+      selector:
+        name: "scdf-kafka"
+  - apiVersion: v1
+    kind: Route
+    metadata:
+      name: "scdf-kafka"
+    spec:
+      host: ${ROUTE_HOST}
+      template:
+        metadata:
+          labels:
+            name: "scdf-kafka"
+      to:
+        kind: Service
+        name: "scdf-kafka"
+      port:
+        targetPort: http
+  - apiVersion: v1
+    kind: DeploymentConfig
+    metadata:
+      name: mysql
+    spec:
+      triggers:
+        - type: ConfigChange
+      replicas: 1
+      selector:
+        name: mysql
+      template:
+        metadata:
+          labels:
+            name: mysql
+        spec:
+          containers:
+            - name: mysql
+              image: mysql:5.6
+              env:
+                - name: MYSQL_RANDOM_ROOT_PASSWORD
+                  value: "true"
+                - name: MYSQL_USER
+                  value: ${DEPLOYER_DATASOURCE_USERNAME}
+                - name: MYSQL_PASSWORD
+                  value: ${DEPLOYER_DATASOURCE_PASSWORD}
+                - name: MYSQL_DATABASE
+                  value: scdf
+              ports:
+                - name: mysql
+                  containerPort: 3306
+              readinessProbe:
+                tcpSocket:
+                  port: 3306
+                initialDelaySeconds: 5
+                timeoutSeconds: 5
+              livenessProbe:
+                tcpSocket:
+                  port: 3306
+                initialDelaySeconds: 5
+                timeoutSeconds: 5
+          restartPolicy: Always
+          serviceAccount: scdf
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      labels:
+        name: "mysql"
+      name: "mysql"
+    spec:
+      template:
+        metadata:
+          labels:
+            name: "mysql"
+      ports:
+        - name: mysql
+          port: 3306
+          targetPort: mysql
+      selector:
+        name: "mysql"
+  - apiVersion: v1
+    kind: DeploymentConfig
+    metadata:
+      name: redis
+    spec:
+      triggers:
+        - type: ConfigChange
+      replicas: 1
+      selector:
+        name: redis
+      template:
+        metadata:
+          labels:
+            name: redis
+        spec:
+          containers:
+            - name: redis
+              image: redis:3-alpine
+              ports:
+                - name: redis
+                  containerPort: 6379
+              readinessProbe:
+                tcpSocket:
+                  port: 6379
+                initialDelaySeconds: 5
+                timeoutSeconds: 5
+              livenessProbe:
+                tcpSocket:
+                  port: 6379
+                initialDelaySeconds: 5
+                timeoutSeconds: 5
+          restartPolicy: Always
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      labels:
+        name: "redis"
+      name: "redis"
+    spec:
+      template:
+        metadata:
+          labels:
+            name: "redis"
+      ports:
+        - name: redis
+          port: 6379
+          targetPort: redis
+      selector:
+        name: "redis"
+  - apiVersion: v1
+    kind: DeploymentConfig
+    metadata:
+      name: kafka-zk
+    spec:
+      triggers:
+        - type: ConfigChange
+      replicas: 1
+      selector:
+        name: kafka-zk
+      template:
+        metadata:
+          labels:
+            name: kafka-zk
+        spec:
+          containers:
+            - name: kafka-zk
+              image: digitalwonderland/zookeeper:latest
+              ports:
+                - containerPort: 2181
+              env:
+                - name: ZOOKEEPER_ID
+                  value: "1"
+                - name: ZOOKEEPER_SERVER_1
+                  value: kafka-zk
+              readinessProbe:
+                tcpSocket:
+                  port: 2181
+                initialDelaySeconds: 5
+                timeoutSeconds: 5
+              livenessProbe:
+                tcpSocket:
+                  port: 2181
+                initialDelaySeconds: 5
+                timeoutSeconds: 5
+          restartPolicy: Always
+          serviceAccount: scdf
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      labels:
+        name: kafka-zk
+      name: kafka-zk
+    spec:
+      template:
+        metadata:
+          labels:
+            name: kafka-zk
+      ports:
+        - name: client
+          port: 2181
+          protocol: TCP
+        - name: follower
+          port: 2888
+          protocol: TCP
+        - name: leader
+          port: 3888
+          protocol: TCP
+      selector:
+        name: kafka-zk
+  - apiVersion: v1
+    kind: DeploymentConfig
+    metadata:
+      name: kafka-broker
+    spec:
+      triggers:
+        - type: ConfigChange
+      replicas: 1
+      selector:
+        name: kafka-broker
+      template:
+        metadata:
+          labels:
+            name: kafka-broker
+        spec:
+          containers:
+            - name: kafka
+              image: wurstmeister/kafka:0.10.1.0
+              ports:
+                - containerPort: 9092
+              env:
+                - name: ENABLE_AUTO_EXTEND
+                  value: "true"
+                - name: KAFKA_RESERVED_BROKER_MAX_ID
+                  value: "999999999"
+                - name: KAFKA_AUTO_CREATE_TOPICS_ENABLE
+                  value: "false"
+                - name: KAFKA_PORT
+                  value: "9092"
+                - name: KAFKA_ADVERTISED_PORT
+                  value: "9092"
+                - name: KAFKA_ADVERTISED_HOST_NAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: status.podIP
+                - name: KAFKA_ZOOKEEPER_CONNECT
+                  value: kafka-zk:2181
+              readinessProbe:
+                tcpSocket:
+                  port: 9092
+                initialDelaySeconds: 5
+                timeoutSeconds: 5
+              livenessProbe:
+                tcpSocket:
+                  port: 9092
+                initialDelaySeconds: 5
+                timeoutSeconds: 5
+          restartPolicy: Always
+          serviceAccount: scdf
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      labels:
+        name: kafka
+      name: kafka
+    spec:
+      ports:
+        - port: 9092
+          name: kafka-port
+          targetPort: 9092
+          protocol: TCP
+      selector:
+        name: kafka-broker
+parameters:
+  - name: JAVA_OPTS
+    displayName: Options to customise the Java runtime
+    description: Options to customise the Java runtime. E.g. -Xms512m -Xmx512m
+    value: "-Xms128m -Xmx384m"
+  - name: ENABLE_CONFIG_SERVER
+    displayName: Enable Spring Cloud Config Server
+    description: "Flag (true/false) indicating whether to enable Spring Cloud Config Server support"
+    value: "false"
+  - name: ENABLE_ANALYTICS
+    displayName: Enable Spring Cloud Data Flow Analytics
+    description: "Flag (true/false) indicating whether to enable the analytics feature. See http://docs.spring.io/spring-cloud-dataflow/docs/1.1.0.RELEASE/reference/html/arch-analytics.html"
+    value: "true"
+    required: true
+  - name: DEPLOYER_REQUESTS_MEMORY
+    displayName: Default memory request for a Pod
+    description: "The default memory request for a Pod. See https://docs.openshift.org/latest/dev_guide/compute_resources.html#dev-compute-resources"
+    value: "256Mi"
+  - name: DEPLOYER_REQUESTS_CPU
+    displayName: Default CPU request for a Pod
+    description: "The default CPU request for a Pod. See https://docs.openshift.org/latest/dev_guide/compute_resources.html#dev-compute-resources"
+    value: "500m"
+  - name: DEPLOYER_LIMITS_MEMORY
+    displayName: Default memory limit for a Pod
+    description: "The default memory limit for a Pod. See https://docs.openshift.org/latest/dev_guide/compute_resources.html#dev-compute-resources"
+    value: "512Mi"
+  - name: DEPLOYER_LIMITS_CPU
+    displayName: Default CPU limit for a Pod
+    description: "The default CPU limit for a Pod. See https://docs.openshift.org/latest/dev_guide/compute_resources.html#dev-compute-resources"
+    value: "1000m"
+  - name: DEPLOYER_SERVER_REQUESTS_MEMORY
+    displayName: Default memory request for the Data Flow Server
+    description: "The default memory request for the Data Flow Server. See https://docs.openshift.org/latest/dev_guide/compute_resources.html#dev-compute-resources"
+    value: "256Mi"
+  - name: DEPLOYER_SERVER_REQUESTS_CPU
+    displayName: Default CPU request for the Data Flow Server
+    description: "The default CPU request for the Data Flow Server. See https://docs.openshift.org/latest/dev_guide/compute_resources.html#dev-compute-resources"
+    value: "500m"
+  - name: DEPLOYER_SERVER_LIMITS_MEMORY
+    displayName: Default memory limit for the Data Flow Server
+    description: "The default memory limit for the Data Flow Server. See https://docs.openshift.org/latest/dev_guide/compute_resources.html#dev-compute-resources"
+    value: "1024Mi"
+  - name: DEPLOYER_SERVER_LIMITS_CPU
+    displayName: Default CPU limit for the Data Flow Server
+    description: "The default CPU limit for the Data Flow Server. See https://docs.openshift.org/latest/dev_guide/compute_resources.html#dev-compute-resources"
+    value: "1000m"
+  - name: SPRING_APPLICATION_JSON
+    displayName: Spring Application JSON for addtional advanced configurations
+    description: "Specified as a single line JSON document. See http://docs.spring.io/spring-boot/docs/current/reference/html/boot-features-external-config.html"
+  - name: REMOTE_MAVEN_REPO_NAME
+    displayName: Remote Maven repository name
+    description: "The name of a remote Maven repository. See http://docs.spring.io/spring-cloud-dataflow/docs/current/reference/html/getting-started-deploying-spring-cloud-dataflow.html#getting-started-deploying-spring-cloud-dataflow"
+    value: "spring"
+  - name: REMOTE_MAVEN_REPO_URL
+    displayName: Remote Maven repository URL
+    description: "The URL of a remote Maven repository from which maven:// resources will be resolved. See http://docs.spring.io/spring-cloud-dataflow/docs/current/reference/html/getting-started-deploying-spring-cloud-dataflow.html#getting-started-deploying-spring-cloud-dataflow"
+    value: "http://repo.spring.io/libs-snapshot"
+  - name: REMOTE_MAVEN_REPO_AUTH_USERNAME
+    displayName: Remote Maven repository username
+    description: "The username to authenticate with the remote Maven repository. See http://docs.spring.io/spring-cloud-dataflow/docs/current/reference/html/getting-started-deploying-spring-cloud-dataflow.html#getting-started-deploying-spring-cloud-dataflow"
+  - name: REMOTE_MAVEN_REPO_AUTH_PASSWORD
+    displayName: Remote Maven repository password
+    description: "The password to authenticate with the remote Maven repository. See http://docs.spring.io/spring-cloud-dataflow/docs/current/reference/html/getting-started-deploying-spring-cloud-dataflow.html#getting-started-deploying-spring-cloud-dataflow"
+  - name: REMOTE_MAVEN_REPO_RESOLVE_POM
+    displayName: In addition to the Jar artifact, resolve the POM artifact
+    description: "The POM artifact contains project metadata that is necessary depending on the build strategy chosen"
+    value: "true"
+  - name: SERVER_PORT
+    displayName: The port to listen for HTTP traffic
+    description: The Spring Boot server.port value. See http://docs.spring.io/spring-boot/docs/current/reference/htmlsingle/#howto-change-the-http-port
+    value: "9393"
+    required: true
+  - name: DEPLOYER_DATASOURCE_USERNAME
+    displayName: Datasource username
+    description: The Spring datasource username
+    value: "scdf"
+  - name: DEPLOYER_DATASOURCE_PASSWORD
+    displayName: Datasource password
+    description: "The Spring datasource password. Note: This password is generated"
+    generate: expression
+    from: "[a-zA-Z0-9]{16}"
+  - name: ROUTE_HOST
+    displayName: The OpenShift Route host value
+    description: A explicit Route host value, otherise the default is used. See https://docs.openshift.org/latest/dev_guide/routes.html

@@ -1,0 +1,38 @@
+= Spring Cloud Data Flow Server for OpenShift
+Donovan Muller
+:doctype: book
+:toc:
+:toclevels: 4
+:source-highlighter: prettify
+:numbered:
+:icons: font
+:hide-uri-scheme:
+:attributes: allow-uri-read
+
+:scdf-core-version: {dataflow-project-version}
+:scdf-server-kubernetes-version: 1.1.0.RELEASE
+:scdf-server-openshift-version: v{project-version}
+
+:scdf-server-openshift-asciidoc: https://github.com/donovanmuller/spring-cloud-dataflow-server-openshift/raw/master/spring-cloud-dataflow-server-openshift-docs/src/main/asciidoc
+
+// ======================================================================================
+
+include::introduction.adoc[]
+
+include::overview.adoc[]
+
+include::features.adoc[]
+
+include::getting-started.adoc[]
+
+include::configuration.adoc[]
+
+include::server.adoc[]
+
+include::application.adoc[]
+
+include::deployment.adoc[]
+
+include::howto.adoc[]
+
+// ======================================================================================

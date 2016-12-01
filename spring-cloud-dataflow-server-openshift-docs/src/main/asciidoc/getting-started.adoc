@@ -1,0 +1,467 @@
+[[getting-started]]
+= Getting Started
+
+[partintro]
+--
+The Data Flow Server for OpenShift extends the Kubernetes Server implementation and therefore many of the configuration
+options and concepts are similar and can in fact be used with the OpenShift server.
+
+Refer to the Spring Cloud Data Flow Server for Kubernetes http://docs.spring.io/spring-cloud-dataflow-server-kubernetes/docs/{scdf-server-kubernetes-version}/reference/htmlsingle[reference guide].
+--
+
+== Deploying Streams on OpenShift
+
+The following guide assumes that you have a OpenShift 3 cluster available. This includes both https://www.openshift.org/[OpenShift Origin]
+and https://www.openshift.com/container-platform/[OpenShift Container Platform] offerings.
+
+If you do not have a OpenShift cluster available, see the next section which describes running a local OpenShift Origin cluster for development/testing
+otherwise continue to <<templates>>.
+
+=== A local OpenShift cluster with minishift
+
+There are a few ways to stand up a local OpenShift Origin cluster on your machine for testing.
+These include:
+
+* https://github.com/openshift/origin/blob/master/docs/cluster_up_down.md[`oc cluster up`]
+* https://www.openshift.org/vm/[All-In-One VM]
+* https://github.com/minishift/minishift[minishift]
+* and others
+
+For the purpose of this guide, the https://github.com/minishift/minishift[minishift] tool will be used.
+
+==== Installation and Getting Started
+
+Install minishift as per the instructions https://github.com/minishift/minishift#installation[here].
+Once you have installed minishift successfully, you can start up a OpenShift instance with `minishift start`.
+
+[source,console]
+----
+$ minishift start --memory 4096 --cpus 4 --deploy-router
+Starting local OpenShift cluster...
+oc is now configured to use the cluster.
+Run this command to use the cluster:
+oc login --username=admin --password=admin
+$
+----
+
+NOTE: The `--deploy-router` option deploys the default https://docs.openshift.org/latest/install_config/router/default_haproxy_router.html[HAProxy Router]
+which is required to expose and access the Spring Cloud Data Flow UI and other tools.
+
+===== OpenShift Console
+
+The OpenShift Console is a valuable interface into your cluster, it is recommended that you open the console with:
+
+[source,console]
+----
+$ minishift console
+Opening OpenShift console in default browser...
+$
+----
+
+a browser window will open with the console login page. Login with `admin`/`admin` credentials.
+
+image::{scdf-server-openshift-asciidoc}/images/scdf-openshift-console.png[OpenShift Console]
+
+IMPORTANT: Make sure you wait for the `docker-registry` and `router` deployments to successfully deploy before continuing.
+These resources are deployed to the `default` project.
+
+===== `oc` CLI tool
+
+You can also manage the local cluster with the `oc` CLI tool.
+If you do not have the `oc` tool installed, follow the instructions https://docs.openshift.org/latest/cli_reference/get_started_cli.html[here].
+
+Login and use the local instance with:
+
+[source,console]
+----
+$ oc login --username=admin --password=admin
+Login successful.
+
+You have access to the following projects and can switch between them with 'oc project <projectname>':
+
+  * default
+    kube-system
+    openshift
+    openshift-infra
+
+Using project "default".
+$
+----
+
+=== Creating a new Project
+
+To group the resources created as part of this guide, create a new Project.
+You can do this using the Console or `oc` tool. Below is an example using the 'oc' tool:
+
+[source,console]
+----
+$ oc new-project scdf --description="Spring Cloud Data Flow"
+Now using project "scdf" on server "https://192.168.64.13:8443".
+...
+$
+----
+
+NOTE: The IP address (192.168.64.13) assigned will vary each time you use `minishift start`, so adjust accordingly.
+The active project should be `scdf` (check with `oc project`) and should be the project used for the rest of this guide.
+
+[[templates]]
+=== Installing the Data Flow Server using OpenShift templates
+
+To install a Data Flow Server and supporting infrastructure components to OpenShift, we will use https://docs.openshift.org/latest/dev_guide/templates.html[OpenShift templates].
+Templates allow you to deploy a predefined set of resources with sane default configurations which can be optionally configured via parameters for specific environments.
+
+The templates for the Data Flow Server for OpenShift are available in the https://github.com/donovanmuller/spring-cloud-dataflow-server-openshift/tree/{scdf-server-openshift-version}/src/etc/openshift[`src/etc/openshift`]
+directory in this project's https://github.com/donovanmuller/spring-cloud-dataflow-server-openshift[GitHub repository].
+There are several templates available:
+
+* https://github.com/donovanmuller/spring-cloud-dataflow-server-openshift/tree/{scdf-server-openshift-version}/src/etc/openshift/scdf-template.yaml[Data Flow Server only] -
+This template only deploys the Spring Cloud Data Flow Server for OpenShift and no other resources.
+This template provides the capability to provide the configuration for Spring Cloud Stream binder implementation, RDBMS and Redis resources with sane defaults. This template is suited for
+environments where these existing resources are already deployed.
+* https://github.com/donovanmuller/spring-cloud-dataflow-server-openshift/tree/{scdf-server-openshift-version}/src/etc/openshift/scdf-ephemeral-datasources-template.yaml[Data Flow Server with ephemeral Datasources] -
+Deploys Data Flow Server for OpenShift as well as Postgres and Redis containers without persistent volumes.
+I.e. the data persisted by these containers will be lost on restart.
+* https://github.com/donovanmuller/spring-cloud-dataflow-server-openshift/tree/{scdf-server-openshift-version}/src/etc/openshift/scdf-ephemeral-datasources-kafka-template.yaml[Data Flow Server with ephemeral Datasources and Kafka binder] -
+Same as above but with an additional Kafka instance for use as the Spring Cloud Stream binder implementation.
+* https://github.com/donovanmuller/spring-cloud-dataflow-server-openshift/tree/{scdf-server-openshift-version}/src/etc/openshift/scdf-ephemeral-datasources-rabbitmq-template.yaml[Data Flow Server with ephemeral Datasources and RabbitMQ binder] -
+Same as above but with a RabbitMQ instance for use as the binder implementation.
+
+==== Installing the OpenShift templates
+
+You can install the above templates using the OpenShift Console or `oc` tool.
+You would have to clone or download the https://github.com/donovanmuller/spring-cloud-dataflow-server-openshift[Data Flow Server for OpenShift] project and
+import the templates in the `src/etc/openshift` directory one by one using the Console or `oc create -f ...`.
+
+However, a more convenient and the recommended way of installing all the templates is to run the following:
+
+[subs="attributes"]
+[source,console]
+----
+$ curl https://raw.githubusercontent.com/donovanmuller/spring-cloud-dataflow-server-openshift/{scdf-server-openshift-version}/src/etc/openshift/install-templates.sh | bash
+Installing OpenShift templates into project 'scdf'...
+Archive:  /tmp/scdf-openshift-templates.zip
+  inflating: /tmp/scdf-openshift-templates/scdf-ephemeral-datasources-kafka-template.yaml
+  inflating: /tmp/scdf-openshift-templates/scdf-ephemeral-datasources-rabbitmq-template.yaml
+  inflating: /tmp/scdf-openshift-templates/scdf-ephemeral-datasources-template.yaml
+  inflating: /tmp/scdf-openshift-templates/scdf-sa.yaml
+  inflating: /tmp/scdf-openshift-templates/scdf-template.yaml
+Installing template '/tmp/scdf-openshift-templates/scdf-ephemeral-datasources-kafka-template.yaml'
+template "spring-cloud-dataflow-server-openshift-ephemeral-kafka" replaced
+Installing template '/tmp/scdf-openshift-templates/scdf-ephemeral-datasources-rabbitmq-template.yaml'
+template "spring-cloud-dataflow-server-openshift-ephemeral-rabbitmq" replaced
+Installing template '/tmp/scdf-openshift-templates/scdf-ephemeral-datasources-template.yaml'
+template "spring-cloud-dataflow-server-openshift-ephemeral-datasources" replaced
+Installing template '/tmp/scdf-openshift-templates/scdf-sa.yaml'
+serviceaccount "scdf" replaced
+Installing template '/tmp/scdf-openshift-templates/scdf-template.yaml'
+template "spring-cloud-dataflow-server-openshift" replaced
+Adding 'edit' role to 'scdf' Service Account...
+Adding 'scdf' Service Account to the 'anyuid' SCC...
+Templates installed.
+$
+----
+
+This will download all the templates and install them into the `scdf` project by default. It will also create and
+configure a required Service Account mentioned below.
+The project can be specified by using `-s scdf` after the `bash` command above.
+
+==== Creating and configuring Service Accounts
+
+The Data Flow Server requires a https://docs.openshift.org/latest/dev_guide/service_accounts.html[Service Account] (named `scdf`),
+which grants it access to perform actions such as reading ConfigMaps and Secrets, creating Builds, etc.
+
+To create the `scdf` Service Account, use the `oc` tool from the `src/etc/openshift` directory:
+
+[source,console]
+----
+$ oc create -f scdf-sa.yaml
+...
+----
+
+NOTE: If you used the `install-templates.sh` script above to install the templates, the `scdf`
+Service Account would have already been created for you.
+
+The `scdf` Service Account must have the `edit` https://docs.openshift.org/latest/admin_guide/manage_authorization_policy.html#viewing-roles-and-bindings[role]
+added to it in order to have the correct permissions to function properly.
+Add the `edit` role with the following:
+
+[source,console]
+----
+$ oc policy add-role-to-user edit system:serviceaccount:scdf:scdf
+...
+----
+
+NOTE: If you used the `install-templates.sh` script above to install the templates, the `scdf`
+Service Account would already have the `edit` role added to it.
+
+The `scdf` Service Account also needs to be added to the `anyuid` Security Context Constraint to allow the MySQL
+Pod to run using the https://docs.openshift.org/latest/admin_guide/manage_scc.html#enable-dockerhub-images-that-require-root[`root` user].
+By default OpenShift starts a Pod using a random user Id. Add the Service Account to the `anyuid` SCC group with:
+
+[source,console]
+----
+$ oc adm policy add-scc-to-user anyuid system:serviceaccount:scdf:scdf
+----
+
+NOTE: If you used the `install-templates.sh` script above to install the templates, the `scdf`
+Service Account is already added to the `anyuid` SCC.
+
+==== Installing the Data Flow Server
+
+For this guide we'll use the https://github.com/donovanmuller/spring-cloud-dataflow-server-openshift/tree/{scdf-server-openshift-version}/src/etc/openshift/scdf-ephemeral-datasources-kafka-template.yaml[Data Flow Server with ephemeral Datasources and Kafka binder]
+template to start a Data Flow Server in the `scdf` project.
+First, using the OpenShift Console, click the _Add to Project_ button. You should see the list of templates mentioned above.
+Choose the `spring-cloud-dataflow-server-openshift-ephemeral-kafka` template.
+
+image::{scdf-server-openshift-asciidoc}/images/scdf-openshift-templates.png[Data Flow Server template]
+
+Default configuration values are provided but can be updated to meet your needs if necessary.
+
+[NOTE]
+====
+To avoid deployments failing due to long image pull times, you can manually pull the requires images.
+Note that you should first change your local Docker client to use the Docker engine in the minishift VM
+
+[subs="attributes"]
+[source,console]
+----
+$ eval $(minishift docker-env)
+$ curl https://raw.githubusercontent.com/donovanmuller/spring-cloud-dataflow-server-openshift/{scdf-server-openshift-version}/src/etc/openshift/pull-images.sh | bash
+----
+
+The above step is optional as OpenShift will also pull the required images. However, depending on your network speed, deployments may fail
+due to timeout. If this happens, simply start another deployment of the component by click the _Deploy_ button when viewing the deployment.
+====
+
+After updating the configuration values or leaving the default values, click the _Create_ button to deploy this template.
+
+Pulling the various Docker images may take some time, so please be patient.
+Once all the images have been pulled, the various pods will start and should all appear as dark blue circles.
+
+image::{scdf-server-openshift-asciidoc}/images/scdf-openshift-deployed.png[Data Flow Server deployed]
+
+NOTE: The Data Flow Server will by default deploy apps only in the project that it itself is deployed. I.e. a Data Flow Server
+deployed in the `default` project will not be able to deploy applications to the `scdf` project. The recommended configuration
+is a Data Flow Server per project.
+
+Verify that the Data Flow Server has started successfully by clicking on the exposed https://docs.openshift.org/latest/dev_guide/routes.html[Route] URL.
+
+image::{scdf-server-openshift-asciidoc}/images/scdf-openshift-dashboard.png[Data Flow Server UI]
+
+NOTE: The UI is mapped to `/dashboard`
+
+If you'd like to reset and use another template.
+Remove all Data Flow resources created by the template you can execute these commands:
+
+[source,console]
+----
+$ oc delete all --selector=template=scdf
+$ oc delete cm --selector=template=scdf
+$ oc delete secret --selector=template=scdf
+----
+
+=== Download and run the Spring Cloud Data Flow Shell
+
+Download and run the Shell, targeting the Data Flow Server exposed via a Route.
+
+[subs="attributes"]
+[source,console]
+----
+$ wget http://repo.spring.io/{dataflow-version-type-lowercase}/org/springframework/cloud/spring-cloud-dataflow-shell/{dataflow-project-version}/spring-cloud-dataflow-shell-{dataflow-project-version}.jar
+$ java -jar spring-cloud-dataflow-shell-{dataflow-project-version}.jar --dataflow.uri=http://scdf-kafka-scdf.192.168.64.15.xip.io/
+
+  ____                              ____ _                __
+ / ___| _ __  _ __(_)_ __   __ _   / ___| | ___  _   _  __| |
+ \___ \| '_ \| '__| | '_ \ / _` | | |   | |/ _ \| | | |/ _` |
+  ___) | |_) | |  | | | | | (_| | | |___| | (_) | |_| | (_| |
+ |____/| .__/|_|  |_|_| |_|\__, |  \____|_|\___/ \__,_|\__,_|
+  ____ |_|    _          __|___/                 __________
+ |  _ \  __ _| |_ __ _  |  ___| | _____      __  \ \ \ \ \ \
+ | | | |/ _` | __/ _` | | |_  | |/ _ \ \ /\ / /   \ \ \ \ \ \
+ | |_| | (_| | || (_| | |  _| | | (_) \ V  V /    / / / / / /
+ |____/ \__,_|\__\__,_| |_|   |_|\___/ \_/\_/    /_/_/_/_/_/
+
+{dataflow-project-version}
+
+Welcome to the Spring Cloud Data Flow shell. For assistance hit TAB or type "help".
+dataflow:>
+----
+
+=== Registering Stream applications with Docker resource
+
+Now register all out-of-the-box stream applications using the Docker resource type, built with the Kafka binder in bulk with the following command.
+
+For more details, review how to link:http://docs.spring.io/spring-cloud-dataflow/docs/{scdf-core-version}/reference/html/spring-cloud-dataflow-register-apps.html[register applications].
+
+[source,console]
+----
+dataflow:>app import --uri http://bit.ly/stream-applications-kafka-docker
+Successfully registered applications: [source.tcp, sink.jdbc, source.http, sink.rabbit, source.rabbit, source.ftp, sink.gpfdist, processor.transform, source.loggregator, source.sftp, processor.filter, sink.cassandra, processor.groovy-filter, sink.router, source.trigger, sink.hdfs-dataset, processor.splitter, source.load-generator, processor.tcp-client, source.time, source.gemfire, source.twitterstream, sink.tcp, source.jdbc, sink.field-value-counter, sink.redis-pubsub, sink.hdfs, processor.bridge, processor.pmml, processor.httpclient, source.s3, sink.ftp, sink.log, sink.gemfire, sink.aggregate-counter, sink.throughput, source.triggertask, sink.s3, source.gemfire-cq, source.jms, source.tcp-client, processor.scriptable-transform, sink.counter, sink.websocket, source.mongodb, source.mail, processor.groovy-transform, source.syslog]
+----
+
+=== Deploy a simple stream in the shell
+
+Create a simple `ticktock` stream definition and deploy it immediately using the following command:
+
+[source,console]
+----
+dataflow:>stream create --name ticktock --definition "time | log" --deploy
+Created new stream 'ticktock'
+Deployment request has been sent
+----
+
+Watch the OpenShift Console as the two application resources are created and the Pods are started.
+Once the Docker images are pulled and the Pods are started up, you should see the Pods with dark blue circles:
+
+image::{scdf-server-openshift-asciidoc}/images/scdf-openshift-stream-deployed.png[ticktock stream deployed]
+
+You can also verify the deployed apps using the `oc tool`
+
+[source,console]
+----
+$ oc get pods
+NAME                     READY     STATUS      RESTARTS   AGE
+...
+ticktock-log-0-2-it3ja   1/1       Running     0          7m
+ticktock-time-2-sxqnp    1/1       Running     0          6m
+----
+
+To verify that the stream is working as expected, tail the logs of the `ticktock-log` app either using the OpenShift Console:
+
+image::{scdf-server-openshift-asciidoc}/images/scdf-openshift-stream-logs.png[ticktock-log logs]
+
+or the `oc` tool:
+
+[source,console]
+----
+$ oc logs -f ticktock-log
+...
+...  INFO 1 --- [afka-listener-1] log-sink                                 : 11/29/16 14:49:59
+...  INFO 1 --- [afka-listener-1] log-sink                                 : 11/29/16 14:50:01
+...  INFO 1 --- [afka-listener-1] log-sink                                 : 11/29/16 14:50:02
+...  INFO 1 --- [afka-listener-1] log-sink                                 : 11/29/16 14:50:03
+...  INFO 1 --- [afka-listener-1] log-sink                                 : 11/29/16 14:50:04
+...  INFO 1 --- [afka-listener-1] log-sink                                 : 11/29/16 14:50:05
+...  INFO 1 --- [afka-listener-1] log-sink                                 : 11/29/16 14:50:06
+...
+----
+
+=== Registering Stream applications with Maven resource
+
+The distinguishing feature of the Data Flow Server for OpenShift is that it has the capability to deploy applications registered with the Maven resource type
+in addition to the Docker resource type. Using the `ticktock` stream example above, we will create a similar stream definition
+but using the Maven resource versions of the apps.
+
+For this example we will register the apps individually using the following command:
+
+[source,console]
+----
+dataflow:>app register --type source --name time-mvn --uri maven://org.springframework.cloud.stream.app:time-source-kafka:{dataflow-project-version}.RELEASE
+Successfully registered application 'source:time-mvn'
+dataflow:>app register --type sink --name log-mvn --uri maven://org.springframework.cloud.stream.app:log-sink-kafka:{dataflow-project-version}.RELEASE
+Successfully registered application 'sink:log-mvn'
+----
+
+NOTE: We couldn't bulk import the Maven version of the apps as we did for the Docker versions because the app names
+would conflict, as the names defined in the bulk import files are the same across resource types. Hence we register the
+Maven apps with a `-mvn` suffix.
+
+=== Deploy a simple stream in the shell
+
+Create a simple `ticktock-mvn` stream definition and deploy it immediately using the following command:
+
+[source,console]
+----
+dataflow:>stream create --name ticktock-mvn --definition "time-mvn | log-mvn" --deploy
+Created new stream 'ticktock-mvn'
+Deployment request has been sent
+----
+
+NOTE: There could be a slight delay once the above command is issued. This is due to the Maven artifacts being
+resolved and cached locally. Depending on the size of the artifacts, this could take some time.
+
+Watch the OpenShift Console as the two application resources are created. Notice this time, that instead of the Pods
+being started, that a https://docs.openshift.org/latest/dev_guide/builds.html[Build] has been started instead.
+The Build will execute and create a Docker image, using the default https://github.com/donovanmuller/spring-cloud-deployer-openshift/tree/{scdf-server-openshift-version}/src/main/resources/[`Dockerfile`],
+containing the app. The resultant Docker image will be pushed to the internal OpenShift https://docs.openshift.org/latest/install_config/registry/index.html[registry],
+where the deployment resource will be triggered when the image has been successfully pushed.
+The https://docs.openshift.org/latest/dev_guide/deployments/how_deployments_work.html[deployment] will then scale the app Pod up, starting the application.
+
+image::{scdf-server-openshift-asciidoc}/images/scdf-openshift-stream-mvn-deployed.png[ticktock-maven stream deployed]
+
+To verify that the stream is working as expected, tail the logs of the `ticktock-log-mvn` app using the `oc` tool:
+
+[source,console]
+----
+$ oc get pods
+NAME                             READY     STATUS      RESTARTS   AGE
+...
+ticktock-mvn-log-mvn-0-1-agpl6   1/1       Running     0          4m
+ticktock-mvn-log-mvn-1-build     0/1       Completed   0          1h
+ticktock-mvn-time-mvn-1-12ikj    1/1       Running     0          1m
+ticktock-mvn-time-mvn-1-build    0/1       Completed   0          1h
+
+$ oc logs -f ticktock-mvn-log-mvn-0-1-agpl6
+...  INFO 1 --- [afka-listener-1] log-sink                                 : 11/29/16 18:34:23
+...  INFO 1 --- [afka-listener-1] log-sink                                 : 11/29/16 18:34:25
+...  INFO 1 --- [afka-listener-1] log-sink                                 : 11/29/16 18:34:26
+...  INFO 1 --- [afka-listener-1] log-sink                                 : 11/29/16 18:34:27
+----
+
+== Deploying Tasks on OpenShift
+
+Deploying Task applications using the Data Flow Server for OpenShift is a similar affair to deploying Stream apps.
+Therefore, for brevity, only the Maven resource version of the task will be shown as an example.
+
+=== Registering Task application with Maven resource
+
+This time we will bulk import the Task application, as we do not have any Docker resource versions imported which would cause conflicts in naming.
+Import all Maven task applications with the following command:
+
+[source,console]
+----
+dataflow:>app import --uri http://bit.ly/1-0-1-GA-task-applications-maven
+----
+
+=== Launch a simple task in the shell
+
+Let’s create a simple task definition and launch it.
+
+[source,console]
+----
+dataflow:>task create task1 --definition "timestamp"
+dataflow:>task launch task1
+----
+
+Note that when the task is launched, an OpenShift Build is started to build the relevant Docker image containing the task app.
+Once the Build has completed successfully, pushing the built image to the internal registry, a bare Pod is started, executing the task.
+
+Verify that the task executed successfully by executing these commands:
+
+[source,console]
+----
+dataflow:>task list
+╔═════════╤═══════════════╤═══════════╗
+║Task Name│Task Definition│Task Status║
+╠═════════╪═══════════════╪═══════════╣
+║task1    │timestamp      │complete   ║
+╚═════════╧═══════════════╧═══════════╝
+
+dataflow:>task execution list
+╔═════════╤══╤═════════════════════════════╤═════════════════════════════╤═════════╗
+║Task Name│ID│         Start Time          │          End Time           │Exit Code║
+╠═════════╪══╪═════════════════════════════╪═════════════════════════════╪═════════╣
+║task1    │1 │Wed Nov 30 13:13:02 SAST 2016│Wed Nov 30 13:13:02 SAST 2016│0        ║
+╚═════════╧══╧═════════════════════════════╧═════════════════════════════╧═════════╝
+----
+
+You can also view the task execution status by using the Data Flow Server UI.
+
+==== Cleanup completed tasks
+
+If you want to delete the Build and Pod created by this task execution, execute the following:
+
+[source,console]
+----
+dataflow:>task destroy --name task1
+----

@@ -1,0 +1,57 @@
+[[configuration]]
+= Configuration
+
+[partintro]
+--
+As the OpenShift Server is based on the Kubernetes Server, all the configuration is mostly identical.
+Please see the Kubernetes Server http://docs.spring.io/spring-cloud-dataflow-server-kubernetes/docs/{scdf-server-kubernetes-version}/reference/html/configuration.html[reference guide]
+for configuration options.
+--
+
+== Maven Configuration
+
+The Maven configuration is important for resolving Maven app artifacts.
+The following example taken from the https://github.com/donovanmuller/spring-cloud-dataflow-server-openshift/{scdf-server-openshift-version}/src/etc/openshift/scdf-template.yaml[Data Flow Server only] template,
+configures a remote Maven repository:
+
+```
+maven:
+  resolvePom: true
+  remote-repositories.spring:
+    url: http://repo.spring.io/libs-snapshot
+    auth:
+      username:
+      password:
+```
+
+Where the `resolvePom` is important for determining the build strategy used.
+See the https://github.com/donovanmuller/spring-cloud-dataflow-server-openshift/{scdf-server-openshift-version}/src/etc/openshift/[OpenShift templates] for reference.
+
+NOTE: More configuration options can be seen in the http://docs.spring.io/spring-cloud-dataflow/docs/1.1.0.RELEASE/reference/html/_configure_maven_properties.html#_configure_maven_properties[Configure Maven Properties]
+section in the Data Flow reference documentation.
+
+== Dockerfile Resolution Strategies
+
+The Data Flow Server for OpenShift uses the https://docs.openshift.org/latest/dev_guide/builds.html#docker-strategy-options[Docker build strategy].
+The default strategy for resolving a Dockerfile is to use the built in Dockerfile included in the OpenShift deployer.
+However, there are three other strategies available:
+
+* If a remote Git URI is specified when creating the stream/task definition using the `spring.cloud.deployer.openshift.build.git.uri` property, this repository will be used and takes highest precedence.
+
+* If `src/main/docker/Dockerfile` is detected in the Maven artifact Jar, then it is assumed that the `Dockerfile` will exist in that location in a remote Git repository.
+In that case, the https://docs.openshift.org/latest/dev_guide/builds.html#source-code[Git repository source] is used in conjunction with the Docker build strategy.
+The remote Git URI and ref are extracted from the `<scm><connection></connection></scm>` and `<scm><tag></tag></scm>` tags in the `pom.xml` (if available) of the Maven Jar artifact.
+For example, if the `<scm><connection>` value was `scm:git:git@github.com:spring-cloud/spring-cloud-dataflow.git`,
+then the remote Git URI would be parsed as `ssh://git@github.com:spring-cloud/spring-cloud-dataflow.git`.
+In short, the `Dockerfile` from the remote Git repository for the app being deployed will be
+used (OpenShift actually clones the Git repo) as the source for the image build.
+Of course, you can include and customise whatever and however you like in this `Dockerfile`.
+
+* The other strategy uses the contents of a `Dockerfile` located in one of three locations as the https://docs.openshift.org/latest/dev_guide/builds.html#dockerfile-source[Dockerfile source]:
+** The file system location of a Dockerfile indicated by the `spring.cloud.deployer.openshift.deployment.dockerfile` deployment property.
+E.g. `--properties "spring.cloud.deployer.openshift.deployment.dockerfile=/tmp/deployer/Dockerfile"`. The *contents* of this file will be used as the source input for the build.
+** The inline Dockerfile content as provided in the `spring.cloud.deployer.openshift.deployment.dockerfile` deployment property.
+E.g. `--properties "spring.cloud.deployer.openshift.deployment.dockerfile=FROM java:8\n RUN wget ..."`
+** The default Dockerfile provided by the OpenShift deployer.
+
+

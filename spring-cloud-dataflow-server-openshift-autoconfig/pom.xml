@@ -12,6 +12,8 @@
 
     <artifactId>spring-cloud-dataflow-server-openshift-autoconfig</artifactId>
 
+    <name>Spring Auto Configuration of Data Flow Server for OpenShift</name>
+
     <dependencies>
         <dependency>
             <groupId>org.springframework.cloud</groupId>
