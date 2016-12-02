@@ -22,7 +22,7 @@ This means that the custom app must be deployed to an accessible Maven repositor
 
 Assuming the local minishift OpenShift environment discussed in the <<getting-started>> section, we will deploy
 a Nexus container to which we can deploy our custom application. Deploying the Nexus image is trivial thanks to
-an OpenShift template https://github.com/donovanmuller/spring-cloud-dataflow-server-openshift/{scdf-server-openshift-version}/src/etc/openshift/nexus-template.yaml[available here].
+an OpenShift template https://github.com/donovanmuller/spring-cloud-dataflow-server-openshift/tree/{scdf-server-openshift-version}/src/etc/openshift/nexus-template.yaml[available here].
 
 NOTE: Make sure you have configured the `scdf` Service Account mentioned in the <<getting-started>> section, as this account is
 used by the Nexus deployment.

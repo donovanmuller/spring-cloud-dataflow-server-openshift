@@ -119,7 +119,7 @@ This template only deploys the Spring Cloud Data Flow Server for OpenShift and n
 This template provides the capability to provide the configuration for Spring Cloud Stream binder implementation, RDBMS and Redis resources with sane defaults. This template is suited for
 environments where these existing resources are already deployed.
 * https://github.com/donovanmuller/spring-cloud-dataflow-server-openshift/tree/{scdf-server-openshift-version}/src/etc/openshift/scdf-ephemeral-datasources-template.yaml[Data Flow Server with ephemeral Datasources] -
-Deploys Data Flow Server for OpenShift as well as Postgres and Redis containers without persistent volumes.
+Deploys Data Flow Server for OpenShift as well as MySQL and Redis containers without persistent volumes.
 I.e. the data persisted by these containers will be lost on restart.
 * https://github.com/donovanmuller/spring-cloud-dataflow-server-openshift/tree/{scdf-server-openshift-version}/src/etc/openshift/scdf-ephemeral-datasources-kafka-template.yaml[Data Flow Server with ephemeral Datasources and Kafka binder] -
 Same as above but with an additional Kafka instance for use as the Spring Cloud Stream binder implementation.
@@ -250,8 +250,10 @@ image::{scdf-server-openshift-asciidoc}/images/scdf-openshift-dashboard.png[Data
 
 NOTE: The UI is mapped to `/dashboard`
 
-If you'd like to reset and use another template.
-Remove all Data Flow resources created by the template you can execute these commands:
+[TIP]
+====
+If you'd like to reset or perhaps try another template, you can remove the Data Flow Server and other
+resources created by the template with:
 
 [source,console]
 ----
@@ -259,6 +261,7 @@ $ oc delete all --selector=template=scdf
 $ oc delete cm --selector=template=scdf
 $ oc delete secret --selector=template=scdf
 ----
+====
 
 === Download and run the Spring Cloud Data Flow Shell
 
@@ -354,11 +357,12 @@ but using the Maven resource versions of the apps.
 
 For this example we will register the apps individually using the following command:
 
+[subs="attributes"]
 [source,console]
 ----
-dataflow:>app register --type source --name time-mvn --uri maven://org.springframework.cloud.stream.app:time-source-kafka:{dataflow-project-version}.RELEASE
+dataflow:>app register --type source --name time-mvn --uri maven://org.springframework.cloud.stream.app:time-source-kafka:{dataflow-project-version}
 Successfully registered application 'source:time-mvn'
-dataflow:>app register --type sink --name log-mvn --uri maven://org.springframework.cloud.stream.app:log-sink-kafka:{dataflow-project-version}.RELEASE
+dataflow:>app register --type sink --name log-mvn --uri maven://org.springframework.cloud.stream.app:log-sink-kafka:{dataflow-project-version}
 Successfully registered application 'sink:log-mvn'
 ----
 

@@ -41,7 +41,7 @@ Note the deployment property `app.custom.spring.cloud.deployer.openshift.default
 |spring.cloud.deployer.openshift.deployment.dockerfile='FROM java:8\nRUN echo "Custom Dockerfile..."'
 |An inline https://docs.docker.com/engine/reference/builder/[Dockerfile] that will be used to build the Docker image. Only applicable to Maven resource apps
 
-|Default Provided Dockerfile
+|Node Selector
 |spring.cloud.deployer.openshift.deployment.nodeSelector=region: primary,role: streams
 |A comma separated list of node selectors (in the form name: value) which will determine where the app's Pod's https://docs.openshift.org/latest/dev_guide/deployments/basic_deployment_operations.html#assigning-pods-to-specific-nodes[get assigned]
 
