@@ -4,7 +4,7 @@ This project provides a Spring Cloud Data Flow server for deployments to OpenShi
 [Spring Cloud Deployer OpenShift](https://github.com/donovanmuller/spring-cloud-deployer-openshift) 
 implementation of the [Spring Cloud Deployer](https://github.com/spring-cloud/spring-cloud-deployer) SPI.
 
-Please refer to the reference documentation on how to get started.
+Please refer to the [reference documentation](https://donovanmuller.github.io/spring-cloud-dataflow-server-openshift/docs/1.1.0.RELEASE/reference/htmlsingle) on how to get started.
 
 ## Building
 
