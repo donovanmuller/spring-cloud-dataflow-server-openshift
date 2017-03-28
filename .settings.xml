@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<settings>
+  <profiles>
+      <profile>
+          <repositories>
+              <repository>
+                  <snapshots>
+                      <enabled>false</enabled>
+                  </snapshots>
+                  <id>bintray-donovanmuller-switchbit-public</id>
+                  <name>bintray</name>
+                  <url>http://dl.bintray.com/donovanmuller/switchbit-public</url>
+              </repository>
+          </repositories>
+          <pluginRepositories>
+              <pluginRepository>
+                  <snapshots>
+                      <enabled>false</enabled>
+                  </snapshots>
+                  <id>bintray-donovanmuller-switchbit-public</id>
+                  <name>bintray-plugins</name>
+                  <url>http://dl.bintray.com/donovanmuller/switchbit-public</url>
+              </pluginRepository>
+          </pluginRepositories>
+          <id>bintray</id>
+      </profile>
+  </profiles>
+  <activeProfiles>
+      <activeProfile>bintray</activeProfile>
+  </activeProfiles>
+</settings>
