@@ -11,7 +11,7 @@
 
 	<groupId>org.springframework.cloud</groupId>
 	<artifactId>spring-cloud-dataflow-server-openshift-parent</artifactId>
-	<version>1.2.0.RELEASE</version>
+	<version>1.2.1.BUILD-SNAPSHOT</version>
 	<packaging>pom</packaging>
 
 	<name>Spring Cloud Data Flow Server for OpenShift</name>
@@ -21,7 +21,7 @@
 		<connection>scm:git:git@github.com:donovanmuller/spring-cloud-dataflow-server-openshift.git</connection>
 		<developerConnection>scm:git:git@github.com:donovanmuller/spring-cloud-dataflow-server-openshift.git</developerConnection>
 		<url>https://github.com/donovanmuller/spring-cloud-dataflow-server-openshift</url>
-		<tag>v1.2.0.RELEASE</tag>
+		<tag>HEAD</tag>
 	</scm>
 
 	<modules>
