@@ -22,12 +22,22 @@ objects:
     data:
       application.yaml: |-
         health.config.enabled: ${ENABLE_CONFIG_SERVER}
+        management.security.enabled: false
+        security.basic.enabled: true
+        security.basic.realm: Spring Cloud Data Flow
 
         spring:
           cloud:
             deployer:
               openshift:
                 environmentVariables: 'SPRING_RABBITMQ_HOST=${RABBITMQ_SERVICE_HOST},SPRING_RABBITMQ_PORT=${RABBITMQ_SERVICE_PORT},SPRING_REDIS_HOST=${REDIS_SERVICE_HOST},SPRING_REDIS_PORT=${REDIS_SERVICE_PORT}'
+
+            dataflow.security.authentication.file.enabled: true
+            dataflow.security.authentication.file.users.admin: 'admin, ROLE_MANAGE, ROLE_VIEW'
+            dataflow.security.authentication.file.users.user: 'password, ROLE_VIEW, ROLE_CREATE'
+            dataflow.features.analytics.enabled: true
+            dataflow.metrics.collector.uri: 'http://scdf-metrics-collector:${SCDF_METRICS_COLLECTOR_SERVICE_PORT}'
+            dataflow.application-properties.stream.spring.cloud.stream.bindings.applicationMetrics.destination: metrics
           datasource:
             url: jdbc:mysql://${MYSQL_SERVICE_HOST}:${MYSQL_SERVICE_PORT}/scdf
             driverClassName: org.mariadb.jdbc.Driver
@@ -55,6 +65,8 @@ objects:
     stringData:
       spring.datasource.username: ${DEPLOYER_DATASOURCE_USERNAME}
       spring.datasource.password: ${DEPLOYER_DATASOURCE_PASSWORD}
+      spring.cloud.dataflow.metrics.collector.username: ${METRICS_SECURITY_USERNAME}
+      spring.cloud.dataflow.metrics.collector.password: ${METRICS_SECURITY_PASSWORD}
   - apiVersion: v1
     kind: DeploymentConfig
     metadata:
@@ -71,8 +83,8 @@ objects:
             name: "scdf-rabbitmq"
         spec:
           containers:
-            - name: "scdf-kafka"
-              image: "donovanmuller/spring-cloud-dataflow-server-openshift:1.1.0.RELEASE"
+            - name: "scdf-rabbit"
+              image: "donovanmuller/spring-cloud-dataflow-server-openshift:1.2.0.RELEASE"
               env:
                 - name: KUBERNETES_NAMESPACE
                   valueFrom:
@@ -103,24 +115,27 @@ objects:
               ports:
                 - name: http
                   containerPort: ${SERVER_PORT}
-              readinessProbe:
-                httpGet:
-                  path: /management/info
-                  # unfortunately we cannot use ${SERVER_PORT} here because of https://github.com/openshift/origin/pull/11421
-                  # OpenShift Origin 1.4 should fix this
-                  port: 9393
-                  scheme: HTTP
-                initialDelaySeconds: 40
-                timeoutSeconds: 10
-              livenessProbe:
-                httpGet:
-                  path: /management/health
-                  # unfortunately we cannot use ${SERVER_PORT} here because of https://github.com/openshift/origin/pull/11421
-                  # OpenShift Origin 1.4 should fix this
-                  port: 9393
-                  scheme: HTTP
-                initialDelaySeconds: 40
-                timeoutSeconds: 10
+              # we cannot use readiness/livenessProbes because of the enabled security
+              # and Kubernetes probes do not support authentication.
+              # TODO need to find a better way of doing this.
+              # readinessProbe:
+              #   httpGet:
+              #     path: /management/info
+              #     # unfortunately we cannot use ${SERVER_PORT} here because of https://github.com/openshift/origin/pull/11421
+              #     # OpenShift Origin 1.4 should fix this
+              #     port: 9393
+              #     scheme: HTTP
+              #   initialDelaySeconds: 40
+              #   timeoutSeconds: 10
+              # livenessProbe:
+              #   httpGet:
+              #     path: /management/health
+              #     # unfortunately we cannot use ${SERVER_PORT} here because of https://github.com/openshift/origin/pull/11421
+              #     # OpenShift Origin 1.4 should fix this
+              #     port: 9393
+              #     scheme: HTTP
+              #   initialDelaySeconds: 40
+              #   timeoutSeconds: 10
               resources:
                 limits:
                   cpu: ${DEPLOYER_SERVER_LIMITS_CPU}
@@ -136,13 +151,7 @@ objects:
       labels:
         name: "scdf-rabbitmq"
       name: "scdf-rabbitmq"
-      annotations:
-        service.alpha.openshift.io/dependencies: '[{"name": "mysql","kind": "Service"},{"name": "redis","kind": "Service"},{"name": "rabbitmq","kind": "Service"}]'
     spec:
-      template:
-        metadata:
-          labels:
-            name: "scdf-rabbitmq"
       ports:
         - name: http
           port: ${SERVER_PORT}
@@ -155,15 +164,84 @@ objects:
       name: "scdf-rabbitmq"
     spec:
       host: ${ROUTE_HOST}
-      template:
-        metadata:
-          labels:
-            name: "scdf-rabbitmq"
       to:
         kind: Service
         name: "scdf-rabbitmq"
       port:
         targetPort: http
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: scdf-metrics-collector-config
+    data:
+      SPRING_RABBITMQ_HOST: ${RABBITMQ_SERVICE_HOST}
+      SPRING_RABBITMQ_PORT: ${RABBITMQ_SERVICE_PORT}
+  - apiVersion: v1
+    kind: DeploymentConfig
+    metadata:
+      name: scdf-metrics-collector
+    spec:
+      triggers:
+        - type: ConfigChange
+      replicas: 1
+      selector:
+        name: scdf-metrics-collector
+      template:
+        metadata:
+          labels:
+            name: scdf-metrics-collector
+        spec:
+          containers:
+            - name: scdf-metrics-collector
+              image: springcloud/metrics-collector-rabbit:1.0.0.RELEASE
+              env:
+                - name: JAVA_OPTS
+                  value: ${METRICS_JAVA_OPTS}
+                - name: SECURITY_USER_NAME
+                  value: ${METRICS_SECURITY_USERNAME}
+                - name: SECURITY_USER_PASSWORD
+                  value: ${METRICS_SECURITY_PASSWORD}
+              envFrom:
+                - configMapRef:
+                    name: scdf-metrics-collector-config
+              ports:
+                - name: http
+                  containerPort: 8080
+              readinessProbe:
+                httpGet:
+                  path: /info
+                  port: 8080
+                  scheme: HTTP
+                initialDelaySeconds: 30
+                timeoutSeconds: 10
+              livenessProbe:
+                httpGet:
+                  path: /health
+                  port: 8080
+                  scheme: HTTP
+                initialDelaySeconds: 30
+                timeoutSeconds: 10
+              resources:
+                limits:
+                  cpu: ${METRICS_SERVER_LIMITS_CPU}
+                  memory: ${METRICS_SERVER_LIMITS_MEMORY}
+                requests:
+                  cpu: ${METRICS_SERVER_REQUESTS_CPU}
+                  memory: ${METRICS_SERVER_REQUESTS_MEMORY}
+          restartPolicy: Always
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      labels:
+        name: scdf-metrics-collector
+      name: scdf-metrics-collector
+    spec:
+      ports:
+        - name: http
+          port: 8080
+          targetPort: http
+      selector:
+        name: scdf-metrics-collector
   - apiVersion: v1
     kind: DeploymentConfig
     metadata:
@@ -213,10 +291,6 @@ objects:
         name: "mysql"
       name: "mysql"
     spec:
-      template:
-        metadata:
-          labels:
-            name: "mysql"
       ports:
         - name: mysql
           port: 3306
@@ -262,10 +336,6 @@ objects:
         name: "redis"
       name: "redis"
     spec:
-      template:
-        metadata:
-          labels:
-            name: "redis"
       ports:
         - name: redis
           port: 6379
@@ -314,10 +384,6 @@ objects:
         name: "rabbitmq"
       name: "rabbitmq"
     spec:
-      template:
-        metadata:
-          labels:
-            name: "rabbitmq"
       ports:
         - name: rabbitmq
           port: 5672
@@ -332,10 +398,6 @@ objects:
     metadata:
       name: "rabbitmq"
     spec:
-      template:
-        metadata:
-          labels:
-            name: "rabbitmq"
       to:
         kind: Service
         name: "rabbitmq"
@@ -386,7 +448,7 @@ parameters:
   - name: DEPLOYER_SERVER_LIMITS_CPU
     displayName: Default CPU limit for the Data Flow Server
     description: "The default CPU limit for the Data Flow Server. See https://docs.openshift.org/latest/dev_guide/compute_resources.html#dev-compute-resources"
-    value: "1000m"
+    value: "2000m"
   - name: SPRING_APPLICATION_JSON
     displayName: Spring Application JSON for addtional advanced configurations
     description: "Specified as a single line JSON document. See http://docs.spring.io/spring-boot/docs/current/reference/html/boot-features-external-config.html"
@@ -397,7 +459,7 @@ parameters:
   - name: REMOTE_MAVEN_REPO_URL
     displayName: Remote Maven repository URL
     description: "The URL of a remote Maven repository from which maven:// resources will be resolved. See http://docs.spring.io/spring-cloud-dataflow/docs/current/reference/html/getting-started-deploying-spring-cloud-dataflow.html#getting-started-deploying-spring-cloud-dataflow"
-    value: "http://repo.spring.io/libs-snapshot"
+    value: "https://repo.spring.io/libs-snapshot"
   - name: REMOTE_MAVEN_REPO_AUTH_USERNAME
     displayName: Remote Maven repository username
     description: "The username to authenticate with the remote Maven repository. See http://docs.spring.io/spring-cloud-dataflow/docs/current/reference/html/getting-started-deploying-spring-cloud-dataflow.html#getting-started-deploying-spring-cloud-dataflow"
@@ -407,7 +469,7 @@ parameters:
   - name: REMOTE_MAVEN_REPO_RESOLVE_POM
     displayName: In addition to the Jar artifact, resolve the POM artifact
     description: "The POM artifact contains project metadata that is necessary depending on the build strategy chosen"
-    value: "true"
+    value: "false"
   - name: SERVER_PORT
     displayName: The port to listen for HTTP traffic
     description: The Spring Boot server.port value. See http://docs.spring.io/spring-boot/docs/current/reference/htmlsingle/#howto-change-the-http-port
@@ -425,3 +487,31 @@ parameters:
   - name: ROUTE_HOST
     displayName: The OpenShift Route host value
     description: A explicit Route host value, otherise the default is used. See https://docs.openshift.org/latest/dev_guide/routes.html
+  - name: METRICS_JAVA_OPTS
+    displayName: Options to customise the Java runtime for the metrics collector
+    description: Options to customise the Java runtime for the metrics collector. E.g. -Xms512m -Xmx512m
+    value: "-Xms256m -Xmx256m"
+  - name: METRICS_SECURITY_USERNAME
+    displayName: Metrics collector username
+    description: The Spring Cloud Data Flow Metrics collector username
+    value: "scdf"
+  - name: METRICS_SECURITY_PASSWORD
+    displayName: Metrics collector password
+    description: The Spring Cloud Data Flow Metrics collector password
+    value: "scdf"
+  - name: METRICS_SERVER_REQUESTS_MEMORY
+    displayName: Default memory request for the Metrics collector
+    description: "The default memory request for the Metrics collector. See https://docs.openshift.org/latest/dev_guide/compute_resources.html#dev-compute-resources"
+    value: "256Mi"
+  - name: METRICS_SERVER_REQUESTS_CPU
+    displayName: Default CPU request for the Metrics collector
+    description: "The default CPU request for the Metrics collector. See https://docs.openshift.org/latest/dev_guide/compute_resources.html#dev-compute-resources"
+    value: "500m"
+  - name: METRICS_SERVER_LIMITS_MEMORY
+    displayName: Default memory limit for the Metrics collector
+    description: "The default memory limit for the Metrics collector. See https://docs.openshift.org/latest/dev_guide/compute_resources.html#dev-compute-resources"
+    value: "1024Mi"
+  - name: METRICS_SERVER_LIMITS_CPU
+    displayName: Default CPU limit for the Metrics collector
+    description: "The default CPU limit for the Metrics collector. See https://docs.openshift.org/latest/dev_guide/compute_resources.html#dev-compute-resources"
+    value: "2000m"

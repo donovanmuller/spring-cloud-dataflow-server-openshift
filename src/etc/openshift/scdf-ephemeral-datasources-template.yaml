@@ -22,12 +22,20 @@ objects:
     data:
       application.yaml: |-
         health.config.enabled: ${ENABLE_CONFIG_SERVER}
+        management.security.enabled: false
+        security.basic.enabled: true
+        security.basic.realm: Spring Cloud Data Flow
 
         spring:
           cloud:
             deployer:
               openshift:
-                environmentVariables: '${DEPLOYER_ENVIRONMENT_VARIABLES}'
+                environmentVariables: '${DEPLOYER_ENVIRONMENT_VARIABLES},SPRING_REDIS_HOST=${REDIS_SERVICE_HOST},SPRING_REDIS_PORT=${REDIS_SERVICE_PORT}'
+
+            dataflow.security.authentication.file.enabled: true
+            dataflow.security.authentication.file.users.admin: 'admin, ROLE_MANAGE, ROLE_VIEW'
+            dataflow.security.authentication.file.users.user: 'password, ROLE_VIEW, ROLE_CREATE'
+            dataflow.features.analytics.enabled: true
           datasource:
             url: jdbc:mysql://${MYSQL_SERVICE_HOST}:${MYSQL_SERVICE_PORT}/scdf
             driverClassName: org.mariadb.jdbc.Driver
@@ -72,7 +80,7 @@ objects:
         spec:
           containers:
             - name: "scdf-ephemeral"
-              image: "donovanmuller/spring-cloud-dataflow-server-openshift:1.1.0.RELEASE"
+              image: "donovanmuller/spring-cloud-dataflow-server-openshift:1.2.0.RELEASE"
               env:
                 - name: KUBERNETES_NAMESPACE
                   valueFrom:
@@ -103,24 +111,27 @@ objects:
               ports:
                 - name: http
                   containerPort: ${SERVER_PORT}
-              readinessProbe:
-                httpGet:
-                  path: /management/info
-                  # unfortunately we cannot use ${SERVER_PORT} here because of https://github.com/openshift/origin/pull/11421
-                  # OpenShift Origin 1.4 should fix this
-                  port: 9393
-                  scheme: HTTP
-                initialDelaySeconds: 40
-                timeoutSeconds: 10
-              livenessProbe:
-                httpGet:
-                  path: /management/health
-                  # unfortunately we cannot use ${SERVER_PORT} here because of https://github.com/openshift/origin/pull/11421
-                  # OpenShift Origin 1.4 should fix this
-                  port: 9393
-                  scheme: HTTP
-                initialDelaySeconds: 40
-                timeoutSeconds: 10
+              # we cannot use readiness/livenessProbes because of the enabled security
+              # and Kubernetes probes do not support authentication.
+              # TODO need to find a better way of doing this.
+              # readinessProbe:
+              #   httpGet:
+              #     path: /management/info
+              #     # unfortunately we cannot use ${SERVER_PORT} here because of https://github.com/openshift/origin/pull/11421
+              #     # OpenShift Origin 1.4 should fix this
+              #     port: 9393
+              #     scheme: HTTP
+              #   initialDelaySeconds: 40
+              #   timeoutSeconds: 10
+              # livenessProbe:
+              #   httpGet:
+              #     path: /management/health
+              #     # unfortunately we cannot use ${SERVER_PORT} here because of https://github.com/openshift/origin/pull/11421
+              #     # OpenShift Origin 1.4 should fix this
+              #     port: 9393
+              #     scheme: HTTP
+              #   initialDelaySeconds: 40
+              #   timeoutSeconds: 10
               resources:
                 limits:
                   cpu: ${DEPLOYER_SERVER_LIMITS_CPU}
@@ -136,13 +147,7 @@ objects:
       labels:
         name: "scdf-ephemeral"
       name: "scdf-ephemeral"
-      annotations:
-        service.alpha.openshift.io/dependencies: '[{"name": "mysql","kind": "Service"},{"name": "redis","kind": "Service"}]'
     spec:
-      template:
-        metadata:
-          labels:
-            name: "scdf-ephemeral"
       ports:
         - name: http
           port: ${SERVER_PORT}
@@ -155,10 +160,6 @@ objects:
       name: "scdf-ephemeral"
     spec:
       host: ${ROUTE_HOST}
-      template:
-        metadata:
-          labels:
-            name: "scdf-ephemeral"
       to:
         kind: Service
         name: "scdf-ephemeral"
@@ -213,10 +214,6 @@ objects:
         name: "mysql"
       name: "mysql"
     spec:
-      template:
-        metadata:
-          labels:
-            name: "mysql"
       ports:
         - name: mysql
           port: 3306
@@ -262,16 +259,12 @@ objects:
         name: "redis"
       name: "redis"
     spec:
-      template:
-        metadata:
-          labels:
-            name: "redis"
       ports:
         - name: redis
           port: 6379
           targetPort: redis
       selector:
-        name: "redis"        
+        name: "redis"
 parameters:
   - name: JAVA_OPTS
     displayName: Options to customise the Java runtime
@@ -328,7 +321,7 @@ parameters:
   - name: REMOTE_MAVEN_REPO_URL
     displayName: Remote Maven repository URL
     description: "The URL of a remote Maven repository from which maven:// resources will be resolved. See http://docs.spring.io/spring-cloud-dataflow/docs/current/reference/html/getting-started-deploying-spring-cloud-dataflow.html#getting-started-deploying-spring-cloud-dataflow"
-    value: "http://repo.spring.io/libs-snapshot"
+    value: "https://repo.spring.io/libs-snapshot"
   - name: REMOTE_MAVEN_REPO_AUTH_USERNAME
     displayName: Remote Maven repository username
     description: "The username to authenticate with the remote Maven repository. See http://docs.spring.io/spring-cloud-dataflow/docs/current/reference/html/getting-started-deploying-spring-cloud-dataflow.html#getting-started-deploying-spring-cloud-dataflow"
@@ -338,7 +331,7 @@ parameters:
   - name: REMOTE_MAVEN_REPO_RESOLVE_POM
     displayName: In addition to the Jar artifact, resolve the POM artifact
     description: "The POM artifact contains project metadata that is necessary depending on the build strategy chosen"
-    value: "true"
+    value: "false"
   - name: SERVER_PORT
     displayName: The port to listen for HTTP traffic
     description: The Spring Boot server.port value. See http://docs.spring.io/spring-boot/docs/current/reference/htmlsingle/#howto-change-the-http-port

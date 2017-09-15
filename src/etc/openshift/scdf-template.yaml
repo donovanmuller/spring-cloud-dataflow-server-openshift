@@ -21,20 +21,24 @@ objects:
     data:
       application.yaml: |-
         health.config.enabled: ${ENABLE_CONFIG_SERVER}
+        management.security.enabled: false
+        security.basic.enabled: true
+        security.basic.realm: Spring Cloud Data Flow
 
         spring:
           cloud:
             deployer:
               openshift:
                 environmentVariables: '${DEPLOYER_ENVIRONMENT_VARIABLES}'
+
+            dataflow.security.authentication.file.enabled: true
+            dataflow.security.authentication.file.users.admin: 'admin, ROLE_MANAGE, ROLE_VIEW'
+            dataflow.security.authentication.file.users.user: 'password, ROLE_VIEW, ROLE_CREATE'
           datasource:
             url: ${DEPLOYER_DATASOURCE_URL}
             driverClassName: ${DEPLOYER_DATASOURCE_DRIVER}
             testOnBorrow: true
             validationQuery: "SELECT 1"
-          redis:
-            host: ${REDIS_SERVICE_HOST}
-            port: ${REDIS_SERVICE_PORT}
 
         # Currently only support for one additional remote Maven repository
         # If additional repositories or more advanced configurations are required, please make use of the SPRING_APPLICATION_JSON parameter
@@ -71,7 +75,7 @@ objects:
         spec:
           containers:
             - name: "scdf"
-              image: "donovanmuller/spring-cloud-dataflow-server-openshift:1.1.0.RELEASE"
+              image: "donovanmuller/spring-cloud-dataflow-server-openshift:1.2.0.RELEASE"
               env:
                 - name: KUBERNETES_NAMESPACE
                   valueFrom:
@@ -102,24 +106,27 @@ objects:
               ports:
                 - name: http
                   containerPort: ${SERVER_PORT}
-              readinessProbe:
-                httpGet:
-                  path: /management/info
-                  # unfortunately we cannot use ${SERVER_PORT} here because of https://github.com/openshift/origin/pull/11421
-                  # OpenShift Origin 1.4 should fix this
-                  port: 9393
-                  scheme: HTTP
-                initialDelaySeconds: 40
-                timeoutSeconds: 10
-              livenessProbe:
-                httpGet:
-                  path: /management/health
-                  # unfortunately we cannot use ${SERVER_PORT} here because of https://github.com/openshift/origin/pull/11421
-                  # OpenShift Origin 1.4 should fix this
-                  port: 9393
-                  scheme: HTTP
-                initialDelaySeconds: 40
-                timeoutSeconds: 10
+              # we cannot use readiness/livenessProbes because of the enabled security
+              # and Kubernetes probes do not support authentication.
+              # TODO need to find a better way of doing this.
+              # readinessProbe:
+              #   httpGet:
+              #     path: /management/info
+              #     # unfortunately we cannot use ${SERVER_PORT} here because of https://github.com/openshift/origin/pull/11421
+              #     # OpenShift Origin 1.4 should fix this
+              #     port: 9393
+              #     scheme: HTTP
+              #   initialDelaySeconds: 40
+              #   timeoutSeconds: 10
+              # livenessProbe:
+              #   httpGet:
+              #     path: /management/health
+              #     # unfortunately we cannot use ${SERVER_PORT} here because of https://github.com/openshift/origin/pull/11421
+              #     # OpenShift Origin 1.4 should fix this
+              #     port: 9393
+              #     scheme: HTTP
+              #   initialDelaySeconds: 40
+              #   timeoutSeconds: 10
               resources:
                 limits:
                   cpu: ${DEPLOYER_SERVER_LIMITS_CPU}
@@ -136,10 +143,6 @@ objects:
         name: "scdf"
       name: "scdf"
     spec:
-      template:
-        metadata:
-          labels:
-            name: "scdf"
       ports:
         - name: http
           port: ${SERVER_PORT}
@@ -152,10 +155,6 @@ objects:
       name: "scdf"
     spec:
       host: ${ROUTE_HOST}
-      template:
-        metadata:
-          labels:
-            name: "scdf"
       to:
         kind: Service
         name: "scdf"
@@ -217,7 +216,7 @@ parameters:
   - name: REMOTE_MAVEN_REPO_URL
     displayName: Remote Maven repository URL
     description: "The URL of a remote Maven repository from which maven:// resources will be resolved. See http://docs.spring.io/spring-cloud-dataflow/docs/current/reference/html/getting-started-deploying-spring-cloud-dataflow.html#getting-started-deploying-spring-cloud-dataflow"
-    value: "http://repo.spring.io/libs-snapshot"
+    value: "https://repo.spring.io/libs-snapshot"
   - name: REMOTE_MAVEN_REPO_AUTH_USERNAME
     displayName: Remote Maven repository username
     description: "The username to authenticate with the remote Maven repository. See http://docs.spring.io/spring-cloud-dataflow/docs/current/reference/html/getting-started-deploying-spring-cloud-dataflow.html#getting-started-deploying-spring-cloud-dataflow"
@@ -227,7 +226,7 @@ parameters:
   - name: REMOTE_MAVEN_REPO_RESOLVE_POM
     displayName: In addition to the Jar artifact, resolve the POM artifact
     description: "The POM artifact contains project metadata that is necessary depending on the build strategy chosen"
-    value: "true"
+    value: "false"
   - name: SERVER_PORT
     displayName: The port to listen for HTTP traffic
     description: The Spring Boot server.port value. See http://docs.spring.io/spring-boot/docs/current/reference/htmlsingle/#howto-change-the-http-port

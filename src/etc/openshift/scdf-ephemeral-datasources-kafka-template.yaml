@@ -22,17 +22,27 @@ objects:
     data:
       application.yaml: |-
         health.config.enabled: ${ENABLE_CONFIG_SERVER}
+        management.security.enabled: false
+        security.basic.enabled: true
+        security.basic.realm: Spring Cloud Data Flow
 
         spring:
           cloud:
             deployer:
               openshift:
                 environmentVariables: 'SPRING_CLOUD_STREAM_KAFKA_BINDER_BROKERS=${KAFKA_SERVICE_HOST}:${KAFKA_SERVICE_PORT},SPRING_CLOUD_STREAM_KAFKA_BINDER_ZK_NODES=${KAFKA_ZK_SERVICE_HOST}:${KAFKA_ZK_SERVICE_PORT},SPRING_REDIS_HOST=${REDIS_SERVICE_HOST},SPRING_REDIS_PORT=${REDIS_SERVICE_PORT}'
+
+            dataflow.security.authentication.file.enabled: true
+            dataflow.security.authentication.file.users.admin: 'admin, ROLE_MANAGE, ROLE_VIEW'
+            dataflow.security.authentication.file.users.user: 'password, ROLE_VIEW, ROLE_CREATE'
+            dataflow.features.analytics.enabled: true
+            dataflow.metrics.collector.uri: 'http://scdf-metrics-collector:${SCDF_METRICS_COLLECTOR_SERVICE_PORT}'
+            dataflow.application-properties.stream.spring.cloud.stream.bindings.applicationMetrics.destination: metrics
           datasource:
             url: jdbc:mysql://${MYSQL_SERVICE_HOST}:${MYSQL_SERVICE_PORT}/scdf
             driverClassName: org.mariadb.jdbc.Driver
             testOnBorrow: true
-            validationQuery: "SELECT 1"
+            validationQuery: 'SELECT 1'
           redis:
             host: ${REDIS_SERVICE_HOST}
             port: ${REDIS_SERVICE_PORT}
@@ -55,29 +65,31 @@ objects:
     stringData:
       spring.datasource.username: ${DEPLOYER_DATASOURCE_USERNAME}
       spring.datasource.password: ${DEPLOYER_DATASOURCE_PASSWORD}
+      spring.cloud.dataflow.metrics.collector.username: ${METRICS_SECURITY_USERNAME}
+      spring.cloud.dataflow.metrics.collector.password: ${METRICS_SECURITY_PASSWORD}
   - apiVersion: v1
     kind: DeploymentConfig
     metadata:
-      name: "scdf-kafka"
+      name: scdf-kafka
     spec:
       triggers:
         - type: ConfigChange
       replicas: 1
       selector:
-        name: "scdf-kafka"
+        name: scdf-kafka
       template:
         metadata:
           labels:
-            name: "scdf-kafka"
+            name: scdf-kafka
         spec:
           containers:
-            - name: "scdf-kafka"
-              image: "donovanmuller/spring-cloud-dataflow-server-openshift:1.1.0.RELEASE"
+            - name: scdf-kafka
+              image: donovanmuller/spring-cloud-dataflow-server-openshift:1.2.0.RELEASE
               env:
                 - name: KUBERNETES_NAMESPACE
                   valueFrom:
                     fieldRef:
-                      fieldPath: "metadata.namespace"
+                      fieldPath: metadata.namespace
                 - name: JAVA_OPTS
                   value: ${JAVA_OPTS}
                 - name: SPRING_CLOUD_CONFIG_SERVER_BOOTSTRAP
@@ -103,24 +115,27 @@ objects:
               ports:
                 - name: http
                   containerPort: ${SERVER_PORT}
-              readinessProbe:
-                httpGet:
-                  path: /management/info
-                  # unfortunately we cannot use ${SERVER_PORT} here because of https://github.com/openshift/origin/pull/11421
-                  # OpenShift Origin 1.4 should fix this
-                  port: 9393
-                  scheme: HTTP
-                initialDelaySeconds: 40
-                timeoutSeconds: 10
-              livenessProbe:
-                httpGet:
-                  path: /management/health
-                  # unfortunately we cannot use ${SERVER_PORT} here because of https://github.com/openshift/origin/pull/11421
-                  # OpenShift Origin 1.4 should fix this
-                  port: 9393
-                  scheme: HTTP
-                initialDelaySeconds: 40
-                timeoutSeconds: 10
+              # we cannot use readiness/livenessProbes because of the enabled security
+              # and Kubernetes probes do not support authentication.
+              # TODO need to find a better way of doing this.
+              # readinessProbe:
+              #   httpGet:
+              #     path: /management/info
+              #     # unfortunately we cannot use ${SERVER_PORT} here because of https://github.com/openshift/origin/pull/11421
+              #     # OpenShift Origin 1.4 should fix this
+              #     port: 9393
+              #     scheme: HTTP
+              #   initialDelaySeconds: 40
+              #   timeoutSeconds: 10
+              # livenessProbe:
+              #   httpGet:
+              #     path: /management/health
+              #     # unfortunately we cannot use ${SERVER_PORT} here because of https://github.com/openshift/origin/pull/11421
+              #     # OpenShift Origin 1.4 should fix this
+              #     port: 9393
+              #     scheme: HTTP
+              #   initialDelaySeconds: 40
+              #   timeoutSeconds: 10
               resources:
                 limits:
                   cpu: ${DEPLOYER_SERVER_LIMITS_CPU}
@@ -134,36 +149,99 @@ objects:
     kind: Service
     metadata:
       labels:
-        name: "scdf-kafka"
-      name: "scdf-kafka"
-      annotations:
-        service.alpha.openshift.io/dependencies: '[{"name": "mysql","kind": "Service"},{"name": "redis","kind": "Service"},{"name": "kafka-zk","kind": "Service"},{"name": "kafka","kind": "Service"}]'
+        name: scdf-kafka
+      name: scdf-kafka
     spec:
-      template:
-        metadata:
-          labels:
-            name: "scdf-kafka"
       ports:
         - name: http
           port: ${SERVER_PORT}
           targetPort: http
       selector:
-        name: "scdf-kafka"
+        name: scdf-kafka
   - apiVersion: v1
     kind: Route
     metadata:
-      name: "scdf-kafka"
+      name: scdf-kafka
     spec:
       host: ${ROUTE_HOST}
+      to:
+        kind: Service
+        name: scdf-kafka
+      port:
+        targetPort: http
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: scdf-metrics-collector-config
+    data:
+      SPRING_CLOUD_STREAM_KAFKA_BINDER_BROKERS: ${KAFKA_SERVICE_HOST}:${KAFKA_SERVICE_PORT}
+      SPRING_CLOUD_STREAM_KAFKA_BINDER_ZK_NODES: ${KAFKA_ZK_SERVICE_HOST}:${KAFKA_ZK_SERVICE_PORT}
+  - apiVersion: v1
+    kind: DeploymentConfig
+    metadata:
+      name: scdf-metrics-collector
+    spec:
+      triggers:
+        - type: ConfigChange
+      replicas: 1
+      selector:
+        name: scdf-metrics-collector
       template:
         metadata:
           labels:
-            name: "scdf-kafka"
-      to:
-        kind: Service
-        name: "scdf-kafka"
-      port:
-        targetPort: http
+            name: scdf-metrics-collector
+        spec:
+          containers:
+            - name: scdf-metrics-collector
+              image: springcloud/metrics-collector-kafka-10:1.0.0.RELEASE
+              env:
+                - name: JAVA_OPTS
+                  value: ${METRICS_JAVA_OPTS}
+                - name: SECURITY_USER_NAME
+                  value: ${METRICS_SECURITY_USERNAME}
+                - name: SECURITY_USER_PASSWORD
+                  value: ${METRICS_SECURITY_PASSWORD}
+              envFrom:
+                - configMapRef:
+                    name: scdf-metrics-collector-config
+              ports:
+                - name: http
+                  containerPort: 8080
+              readinessProbe:
+                httpGet:
+                  path: /info
+                  port: 8080
+                  scheme: HTTP
+                initialDelaySeconds: 30
+                timeoutSeconds: 10
+              livenessProbe:
+                httpGet:
+                  path: /health
+                  port: 8080
+                  scheme: HTTP
+                initialDelaySeconds: 30
+                timeoutSeconds: 10
+              resources:
+                limits:
+                  cpu: ${METRICS_SERVER_LIMITS_CPU}
+                  memory: ${METRICS_SERVER_LIMITS_MEMORY}
+                requests:
+                  cpu: ${METRICS_SERVER_REQUESTS_CPU}
+                  memory: ${METRICS_SERVER_REQUESTS_MEMORY}
+          restartPolicy: Always
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      labels:
+        name: scdf-metrics-collector
+      name: scdf-metrics-collector
+    spec:
+      ports:
+        - name: http
+          port: 8080
+          targetPort: http
+      selector:
+        name: scdf-metrics-collector
   - apiVersion: v1
     kind: DeploymentConfig
     metadata:
@@ -184,7 +262,7 @@ objects:
               image: mysql:5.6
               env:
                 - name: MYSQL_RANDOM_ROOT_PASSWORD
-                  value: "true"
+                  value: 'true'
                 - name: MYSQL_USER
                   value: ${DEPLOYER_DATASOURCE_USERNAME}
                 - name: MYSQL_PASSWORD
@@ -210,19 +288,15 @@ objects:
     kind: Service
     metadata:
       labels:
-        name: "mysql"
-      name: "mysql"
+        name: mysql
+      name: mysql
     spec:
-      template:
-        metadata:
-          labels:
-            name: "mysql"
       ports:
         - name: mysql
           port: 3306
           targetPort: mysql
       selector:
-        name: "mysql"
+        name: mysql
   - apiVersion: v1
     kind: DeploymentConfig
     metadata:
@@ -259,19 +333,15 @@ objects:
     kind: Service
     metadata:
       labels:
-        name: "redis"
-      name: "redis"
+        name: redis
+      name: redis
     spec:
-      template:
-        metadata:
-          labels:
-            name: "redis"
       ports:
         - name: redis
           port: 6379
           targetPort: redis
       selector:
-        name: "redis"
+        name: redis
   - apiVersion: v1
     kind: DeploymentConfig
     metadata:
@@ -294,7 +364,7 @@ objects:
                 - containerPort: 2181
               env:
                 - name: ZOOKEEPER_ID
-                  value: "1"
+                  value: '1'
                 - name: ZOOKEEPER_SERVER_1
                   value: kafka-zk
               readinessProbe:
@@ -316,10 +386,6 @@ objects:
         name: kafka-zk
       name: kafka-zk
     spec:
-      template:
-        metadata:
-          labels:
-            name: kafka-zk
       ports:
         - name: client
           port: 2181
@@ -349,20 +415,20 @@ objects:
         spec:
           containers:
             - name: kafka
-              image: wurstmeister/kafka:0.10.1.0
+              image: wurstmeister/kafka:0.10.2.1
               ports:
                 - containerPort: 9092
               env:
                 - name: ENABLE_AUTO_EXTEND
-                  value: "true"
+                  value: 'true'
                 - name: KAFKA_RESERVED_BROKER_MAX_ID
-                  value: "999999999"
+                  value: '999999999'
                 - name: KAFKA_AUTO_CREATE_TOPICS_ENABLE
-                  value: "false"
+                  value: 'false'
                 - name: KAFKA_PORT
-                  value: "9092"
+                  value: '9092'
                 - name: KAFKA_ADVERTISED_PORT
-                  value: "9092"
+                  value: '9092'
                 - name: KAFKA_ADVERTISED_HOST_NAME
                   valueFrom:
                     fieldRef:
@@ -399,14 +465,14 @@ parameters:
   - name: JAVA_OPTS
     displayName: Options to customise the Java runtime
     description: Options to customise the Java runtime. E.g. -Xms512m -Xmx512m
-    value: "-Xms128m -Xmx384m"
+    value: "-Xms384m -Xmx384m"
   - name: ENABLE_CONFIG_SERVER
     displayName: Enable Spring Cloud Config Server
     description: "Flag (true/false) indicating whether to enable Spring Cloud Config Server support"
     value: "false"
   - name: ENABLE_ANALYTICS
     displayName: Enable Spring Cloud Data Flow Analytics
-    description: "Flag (true/false) indicating whether to enable the analytics feature. See http://docs.spring.io/spring-cloud-dataflow/docs/1.1.0.RELEASE/reference/html/arch-analytics.html"
+    description: "Flag (true/false) indicating whether to enable the analytics feature. See http://docs.spring.io/spring-cloud-dataflow/docs/1.2.0.RELEASE/reference/html/arch-analytics.html"
     value: "true"
     required: true
   - name: DEPLOYER_REQUESTS_MEMORY
@@ -440,7 +506,7 @@ parameters:
   - name: DEPLOYER_SERVER_LIMITS_CPU
     displayName: Default CPU limit for the Data Flow Server
     description: "The default CPU limit for the Data Flow Server. See https://docs.openshift.org/latest/dev_guide/compute_resources.html#dev-compute-resources"
-    value: "1000m"
+    value: "2000m"
   - name: SPRING_APPLICATION_JSON
     displayName: Spring Application JSON for addtional advanced configurations
     description: "Specified as a single line JSON document. See http://docs.spring.io/spring-boot/docs/current/reference/html/boot-features-external-config.html"
@@ -451,7 +517,7 @@ parameters:
   - name: REMOTE_MAVEN_REPO_URL
     displayName: Remote Maven repository URL
     description: "The URL of a remote Maven repository from which maven:// resources will be resolved. See http://docs.spring.io/spring-cloud-dataflow/docs/current/reference/html/getting-started-deploying-spring-cloud-dataflow.html#getting-started-deploying-spring-cloud-dataflow"
-    value: "http://repo.spring.io/libs-snapshot"
+    value: "https://repo.spring.io/libs-snapshot"
   - name: REMOTE_MAVEN_REPO_AUTH_USERNAME
     displayName: Remote Maven repository username
     description: "The username to authenticate with the remote Maven repository. See http://docs.spring.io/spring-cloud-dataflow/docs/current/reference/html/getting-started-deploying-spring-cloud-dataflow.html#getting-started-deploying-spring-cloud-dataflow"
@@ -461,7 +527,7 @@ parameters:
   - name: REMOTE_MAVEN_REPO_RESOLVE_POM
     displayName: In addition to the Jar artifact, resolve the POM artifact
     description: "The POM artifact contains project metadata that is necessary depending on the build strategy chosen"
-    value: "true"
+    value: "false"
   - name: SERVER_PORT
     displayName: The port to listen for HTTP traffic
     description: The Spring Boot server.port value. See http://docs.spring.io/spring-boot/docs/current/reference/htmlsingle/#howto-change-the-http-port
@@ -479,3 +545,31 @@ parameters:
   - name: ROUTE_HOST
     displayName: The OpenShift Route host value
     description: A explicit Route host value, otherise the default is used. See https://docs.openshift.org/latest/dev_guide/routes.html
+  - name: METRICS_JAVA_OPTS
+    displayName: Options to customise the Java runtime for the metrics collector
+    description: Options to customise the Java runtime for the metrics collector. E.g. -Xms512m -Xmx512m
+    value: "-Xms256m -Xmx256m"
+  - name: METRICS_SECURITY_USERNAME
+    displayName: Metrics collector username
+    description: The Spring Cloud Data Flow Metrics collector username
+    value: "scdf"
+  - name: METRICS_SECURITY_PASSWORD
+    displayName: Metrics collector password
+    description: The Spring Cloud Data Flow Metrics collector password
+    value: "scdf"
+  - name: METRICS_SERVER_REQUESTS_MEMORY
+    displayName: Default memory request for the Metrics collector
+    description: "The default memory request for the Metrics collector. See https://docs.openshift.org/latest/dev_guide/compute_resources.html#dev-compute-resources"
+    value: "256Mi"
+  - name: METRICS_SERVER_REQUESTS_CPU
+    displayName: Default CPU request for the Metrics collector
+    description: "The default CPU request for the Metrics collector. See https://docs.openshift.org/latest/dev_guide/compute_resources.html#dev-compute-resources"
+    value: "500m"
+  - name: METRICS_SERVER_LIMITS_MEMORY
+    displayName: Default memory limit for the Metrics collector
+    description: "The default memory limit for the Metrics collector. See https://docs.openshift.org/latest/dev_guide/compute_resources.html#dev-compute-resources"
+    value: "1024Mi"
+  - name: METRICS_SERVER_LIMITS_CPU
+    displayName: Default CPU limit for the Metrics collector
+    description: "The default CPU limit for the Metrics collector. See https://docs.openshift.org/latest/dev_guide/compute_resources.html#dev-compute-resources"
+    value: "2000m"

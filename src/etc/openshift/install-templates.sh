@@ -10,15 +10,16 @@
 #
 # or alternatively:
 #
-# $ curl -sL https://github.com/donovanmuller/spring-cloud-dataflow-server-openshift/releases/download/1.1.0.RELEASE/scdf-openshift-templates.zip \
-#   | bash -s [project name]
+# $ curl -sL https://github.com/donovanmuller/spring-cloud-dataflow-server-openshift/releases/download/${version}/scdf-openshift-templates.zip \
+#   | bash -s [project name] [tag/branch]
 #
 
 project=${1:-scdf}
+version=${2:-v1.1.0.RELEASE}
 
-echo "Installing OpenShift templates into project '${project}'..."
+echo "Installing OpenShift templates (${version}) into project '${project}'..."
 
-curl -o /tmp/scdf-openshift-templates.zip -sL https://github.com/donovanmuller/spring-cloud-dataflow-server-openshift/releases/download/v1.1.0.RELEASE/scdf-openshift-templates.zip
+curl -o /tmp/scdf-openshift-templates.zip -sL https://github.com/donovanmuller/spring-cloud-dataflow-server-openshift/releases/download/${version}/scdf-openshift-templates.zip
 unzip -o /tmp/scdf-openshift-templates.zip -d /tmp/scdf-openshift-templates
 
 shopt -s nullglob
@@ -34,6 +35,6 @@ oc policy add-role-to-user edit system:serviceaccount:${project}:scdf
 
 echo "Adding 'scdf' Service Account to the 'anyuid' SCC..."
 
-oc adm policy add-scc-to-user anyuid system:serviceaccount:scdf:scdf
+oc adm policy add-scc-to-user anyuid system:serviceaccount:${project}:scdf
 
 echo "Templates installed."

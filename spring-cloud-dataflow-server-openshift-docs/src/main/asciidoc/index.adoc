@@ -10,7 +10,7 @@ Donovan Muller
 :attributes: allow-uri-read
 
 :scdf-core-version: {dataflow-project-version}
-:scdf-server-kubernetes-version: 1.1.0.RELEASE
+:scdf-server-kubernetes-version: 1.2.1.RELEASE
 :scdf-server-openshift-version: v{project-version}
 
 :scdf-server-openshift-asciidoc: https://github.com/donovanmuller/spring-cloud-dataflow-server-openshift/raw/master/spring-cloud-dataflow-server-openshift-docs/src/main/asciidoc

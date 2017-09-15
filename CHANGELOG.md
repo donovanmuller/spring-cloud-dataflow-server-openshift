@@ -1,5 +1,15 @@
 # Change Log
 
+## [v1.2.0.RELEASE](https://github.com/donovanmuller/spring-cloud-dataflow-server-openshift/tree/v1.2.0.RELEASE) (2017-07-09)
+[Full Changelog](https://github.com/donovanmuller/spring-cloud-dataflow-server-openshift/compare/v1.1.0.RELEASE...v1.2.0.RELEASE)
+
+**Closed issues:**
+
+- Update to s-c-deployer-openshift 1.2.0 [\#17](https://github.com/donovanmuller/spring-cloud-dataflow-server-openshift/issues/17)
+- Downloadable jar [\#15](https://github.com/donovanmuller/spring-cloud-dataflow-server-openshift/issues/15)
+- stream deploy : Message: Forbidden! User admin doesn't have permission [\#12](https://github.com/donovanmuller/spring-cloud-dataflow-server-openshift/issues/12)
+- Configured service account doesn't have access to execute GET request   [\#11](https://github.com/donovanmuller/spring-cloud-dataflow-server-openshift/issues/11)
+
 ## [v1.1.0.RELEASE](https://github.com/donovanmuller/spring-cloud-dataflow-server-openshift/tree/v1.1.0.RELEASE) (2016-12-01)
 **Closed issues:**
 
