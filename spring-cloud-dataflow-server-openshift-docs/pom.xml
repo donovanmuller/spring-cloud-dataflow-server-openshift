@@ -31,6 +31,7 @@
                                 <project-artifactId>${project.artifactId}</project-artifactId>
                                 <version-type-lowercase>${version-type-lowercase}</version-type-lowercase>
                                 <dataflow-project-version>${spring-cloud-dataflow.version}</dataflow-project-version>
+                                <spring-cloud-dataflow-version>${spring-cloud-dataflow.version}</spring-cloud-dataflow-version>
                                 <dataflow-version-type-lowercase>${dataflow-version-type-lowercase}</dataflow-version-type-lowercase>
                             </attributes>
                         </configuration>

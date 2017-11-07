@@ -1,0 +1,47 @@
+sudo: required
+language: java
+jdk:
+  - oraclejdk8
+cache:
+  directories:
+    - $HOME/.m2
+services:
+  - docker
+
+env:
+  global:
+    # GITHUB_ACCESS_TOKEN
+    - secure: "oksQ38Jz+YKUNR6DbbvJrtLLeTkQPrN5QzBTIbsINHHdq5jFzCiHx6tBvLyk4wk/dVRq2QuonFGQedil0KaD42CZ0DKnzId0aSPL10+cFgvvH5msNYBElw7Tx3HyWq5UnWRPXhE0MsJl44HVX0nUmMZ6lDUuvfA0EN/fcnKS1bMp/VUCLEAgq22pI6+SVy5QKpbu8rffAtsF1m+IefavspgNaaIIxzF8jzBW5uTTr50dBc3zVhK27DKIs9AuEAGrRtUrDgajJACoRn3Ws0OhKrOzWMHo/Dt4T8UVZX13Igd5ftWQpCFpZH6ysNHnEmDHYyDmig0q+tS5PKYbfYvgxjmf2fTlD1N8JpyE7tfj04MMuKp/bGTIqhQZIvXRX6Y2RNsESreE9lS2jAdAM+DpmpmF4arMppLU9c8PvSmTPeWoupF3AB6HPKZEwW16F1LM1od3gSsBEE8Jc9tnPJjex4vLxXjRmL3OeYHWGQrz28Z62gRh+3OuMpq03ety2fQpz0n8GcaIjwzNpiXF1Kd7gEDStgOkr25TlFrM8fInIBHoR8GjkOWK8UFOgwgM60SoN/iGGgKiGuM2kzQwC2yG1QyaUqSANdvMhD4rVUOb1b+hikd86871xQAl5BDgVGBOMvC4OckVzcwV8ZFdN6EadDfGQ1P2ixHz2C0bxn5Amwo="
+    # GITHUB_USERNAME
+    - secure: "Jc+gPYyA4lKyzAFE87DxyVLIwnLLkZAA1xsxVxCUEdqVE//gLxV1VEoo1tGE8mh726bW9rwUO0xyVIS7/4PznJZTkGeag8FaVKl7dhp7o6EVRHK+cZ9hPLdAr3qi76xYlcEsi+QdGME0zOUdo+AAkLlNYm8678Wb0CHoXnrVI5r/wVx1mk3lBXmHsTD7yU7iCRy3CHH53r0/BhaMuHzab9fzKdz8bu8lSdDCPNro3r21TIzjDzgLk4ZTAxMg+aVzAI3L0v1AUolR0kcHVg0jXZBd6eSJCUvvzDLPxyPEga2xv3LLrrDNX2dgn/4J7gnrOeOYhs5kE88yl5D0HU851EJ6ehtwNxeE1aAy5HZwgSg7o6NNX5bsbaL+oaXy7eCelhlJIudw6FG8xA5kSFSg4befO6pH8ypP5VKRIInb9I7KRH05yeibmqU6nY+NHUxHSBGh6B47nHhM6rwKqnhhuD6nkCSPyXbyUTaNZ8kziZ8Iv0IDtuAJw+DkqGWKmNtUT4u/04qTb5dO9o5+OPpSauhu4i+NibIthJPLrmCZqRBkhR2zfJ4c3ryIx+4FWbOtSlQpLsOKrOhB85tIe2NofmLjgTUA5F8clTOTK7xDg6CqEPOcFlNRgpqrqw3dl8b0gEvci1Sz2bjix6Xq9XFIQZgsZg/bDwh3xx6cew++b1k="
+    # BINTRAY_PASSWORD
+    - secure: "LCZwcOp39+yA0plbX5mSbFQfaC3TZ3pjf/pFj+HwteMKLU12LinS0lww70xPLlfftjNBLV8P+aIJHgXQBJaxBNmA0lzZEVl8MUarkVEhClRTGvixJtlMmLxKx7eg702nGgsYTYf+j1/MuMHos8MsrpEI6IA5E7v9AKNUYEGhFveKhp9RFG8+N7rQTyFw/n8egw5aRQIWaPoJQpNNc5mIlxhDWLCbC2P7HVuJYIpXLbFaJR/eTu4UgmH/goKr++s0Ar7hBNv1us+XtC2a1184+r05ynOzx9mih8AM5Kna9MKMUxLT+nVmisGsaGLzd1V3ELZmcAmydA5ykkBGz63mKugDJm6VIi7XjaGPx8y4aL21rE0rbVQeoXu1xmQDOxo44EWGqH98KQqCEEPPZ7Ydofa6SSTLkx3KxheBQiVizg3KSR9hMEzD9moeHQsLV4HE0Dl6dPLV8Fknz3sdOzB4pcKyu6yzIfRFc3intj7gZKzvMwbwzagaGWUHmoo5jaPe3/7qIYbRR/3oVoPhaLW6ZM+9xC55NNfL5TXHzAcXzc47lCnYkQyFbm1Jj9ZuOSOg2LT8vQthOKT+t76JuvvRAg1QsD0tLDIIWpHjrzC0ySsB0zLaUtOca4+nO38eJc6ArvM8QVECpiI4ryIk77bBU7BAQVqypOUqCP/cdzSnelM="
+    # GPG_PASSPHRASE
+    - secure: "Ia3B3DBiI7IPePZ+FUFz7qG37t9ejg7Ss9ilSuzuEQegHAEqI65K3u+sEzjIBsaCtJstoubgilL74rl8fL6V7AKi+4dr8UL88NUXECCyworR4gD3mVTPd9ugaskQDFUAUT59nXekC7YPoBnY0owlwTSkH7cEyKaB5tDNmouGZssHlMG3rtNTtgQO5J/Mf805Vye/ZsM0xz1hQx9aERkaBdMel4EsxJngx0AN5Nfm88mGkxhzKj2bBbZ/sBDD+xPNjDWNO+WKnrUSXzBRCjpKxpZcavTfwnEp38024AqmIomBqJrJWsIE+MvsYcN5QmpaZev59KYOBgngm17RtardTYB6nilWWVBbnQzzTkF8cQeuwXAR9S1y93Q3CpCqmU5d2NTm9MKqc6pNIj6uv4/08js7rA/hfeTxR+GYwOwQXmkGhLpJVO1k2cu+1TL7JG1CFa1YYp2HvptdReheeYHzmwQScf7yICA+LYShBPjHoK8IqIjlDTYv5WXUW51DMvZ+6CHwGTc2nwaP0NJidkV3fOyATKgGn6jP+b6xDDapQPea/o/Lh7MqKS2IRsRNfljTve8SvWFVSU7RfK8MjXdHl7t5ug9nITna3+fipHJxVyYbEB+RX+Sy+1/O5B7db8uYA9hWiExy2ciuC+tJosMhJ1EaN4kMRon2L0vQnkkIJtc="
+    # GPG_OWNERTRUST
+    - secure: "TIFQF8XYluEwU6J3Okt3I3Q/NDawoU55gBLztciPQSPIOuMYReUX1WdO+vQovQKsv4zVZGgNJRQwl+rTYcHS/iCqb/2PqnFmaHxnOdq5M4F164OPk/KcyqknuTbYuKk8oLUzUyKvUq5AINL2SaG6Gg4yZxlPuhj785nufbCaDelQ3J+65zAIg+9NmOwAZMH8NwHrY4XRJljWGCzQZNay6g84ia23UXir5QctHq+qmV/gUphLj5qQm5BaeUX9lnUYbz2k3TyErONP5CJRf3yBBbOFiiTKv1m3Cs/AYI0Vve2nsG9Vi5VYT7li3X+kcL2r3F9sNI9XKTxDZ/hcnS308VCXL94zqRG/NGGkPQBbte9wtsMuG8r7yzqLKyJ+E7o0dLBOKtQ5c5uwF7/f/okxBBJfhuY/lGzezqzHXQ3O//VInX11XErjBcUAQsnDKpnZuOfRWG8DYzPkSYCp51QYTUrutpcCpC7lOnmcKloiZ/fa9HBjKl22dZKQLypaZHz4lo2b1702ZScPOs0/lpLvN1mf3bbcOJMLrm+BVfzFQaTYw7NHDrAIJlPYfVQ5tsbDMnSGA6ecmMO5iOVckSZcjN9guHLQV44QwV17Pao/R7rAFDBl0d0QvtjyrZFKFrzn3luUew3md8XfoU2v3J2gmTfmy/2pwswi6dww1HBvcTs="
+    # DOCKER_USERNAME
+    - secure: "ZAmE6oVPiT0XGzVPuZMQYwbu2mYF8SEe9GhH/fWLgf4EFYqotXCKlAagZOWQVN5TNWal0K1w37b5lNypCqyVAwq6Sh3geoenUMGAXvWYaRHLfYF0tob0HzbXkbEVRC8YSfyOkwFYgOp4Ly5XT73LfUfNu91m61k73DpPQpZq1byQA6+9W6MVZ2ciS+z8t7Y+61lYf8WhR/lg4pGgozyZpwaG/1/eQ1oLdERQmsYVDMRJAv0bmfsAopKveZrnEQL0gUWcIppng+kpznwq07Nb0TB8t/GmmmntGOg8JfGGR9ugeI2p+6322NIDDj8PW/sD/JW3LJI3NCz4VpcOcUoB8fNKNn1L/H28d2aVko2JMT/mzlfnqoxX/xCbodSHhAvcBIh9qUIztLMfrvWRGdeLRlSXyzQPWrOEKOiGqZht5p8ta68E1AIyAsu8M+JLMGqiFrAmlssOQ8Nq4aAVRf/JJEPiwC3ru+/te7NT1pCQhskdNjogNK5l+84bvaT5FY6T1Viyj/Zt7LpcpaSnkdQWfciPee2uXqP+6mfAx2JiY8eW8WDE3SbsxQmY/fTca0yd0H+nKo/iU5vjBSeKVCQR3Ql292YIc8YthdRvlDf7SrTTRpuXua4qH2mCxzWK9jFNfRCuok3b0AoyTZTwloI77hNZBQynefnfq9Mz1UonnqE="
+    # DOCKER_PASSWORD
+    - secure: "b6r3s4YCwy9W/W1y/oWorewQF/5LmS5j78IqHpvr+Q3RidCMLN88h2mAxLO884H1XEwnYqiSadYaBAcAACVGW2w/FBvzvekHPEEb+UQ8udWq4BLwUtr55EGegFt9G60a90VIVBp3RHFsIQuOHcvyY9DFpVuTKuwepSc2Gyv+VbG39O3HZ8wHHm6sTmTcrojwZ3//YoXWV4dAiyTYuNYBvfDVjm61tCwbZGTyy0Jw0DuiYKKDI4Pqwm/6Gxe4jmDlUOV9EDuCK1MCBsBYAouXOhWjqLOTfoph6J2bOuSFWDiGIUjqxjye/yI3H5x4TNsxYKQAMkbf9tRM+l4heUkfasW5aNpljWjokcEzHs8GKyKkwJLRt784ZHFeou8rTTCsmUNnVXa7MR4i8a0M4nz08zyBg+sutILqWGiGmQuLecTyv2EZmoRwVy5v28Hbu4UBllFq0LsozI0FKE910Y5XkdorQs8NKQHvnIngBC1nmtUOURQU/B4JPHwhUDGbsVbRJS0CfGsGCHFeB+JxJfDBh3hcgVB7WN2EfmY39uuZm5hyl9TNNI5uYxXOEmGj95Mo5JCpaodQiusizf2yQTs4UgNJRNE/jgblQkERP83LUq3sH0k4cnCYpFPZW9GASC5008nI31yfCDrpRfSFDlF2H341JafVCRGFMOsHBXOIgMQ="
+
+before_install:
+  - openssl aes-256-cbc -K $encrypted_baca5d0b86b6_key -iv $encrypted_baca5d0b86b6_iv -in .travis/gpg_secret_key.enc -out /tmp/gpg_secret_key -d
+  - gpg_secret_key=$(< /tmp/gpg_secret_key)
+  - if [ ! -z "$gpg_secret_key" ]; then echo $gpg_secret_key | base64 --decode | gpg --import; fi
+  - if [ ! -z "$GPG_OWNERTRUST" ]; then echo $GPG_OWNERTRUST | base64 --decode | gpg --import-ownertrust; fi
+
+script:
+  - ./mvnw --batch-mode cobertura:cobertura -DperformRelease=true -Dlogging.level.=ERROR
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
+
+deploy:
+  provider: script
+  # see https://github.com/travis-ci/travis-ci/issues/5538
+  script: chmod +x .travis/release.sh && .travis/release.sh
+  skip_cleanup: true
+  on:
+    jdk: oraclejdk8
+    tags: true

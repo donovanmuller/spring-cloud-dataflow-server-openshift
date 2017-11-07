@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.springframework.cloud</groupId>
 		<artifactId>spring-cloud-dataflow-parent</artifactId>
-		<version>1.2.2.RELEASE</version>
+		<version>1.2.3.RELEASE</version>
 		<relativePath />
 	</parent>
 
@@ -31,8 +31,8 @@
 	</modules>
 
 	<properties>
-		<spring-cloud-deployer-openshift.version>1.2.0.RELEASE</spring-cloud-deployer-openshift.version>
-		<spring-cloud-dataflow.version>1.2.2.RELEASE</spring-cloud-dataflow.version>
+		<spring-cloud-deployer-openshift.version>1.2.1.RELEASE</spring-cloud-deployer-openshift.version>
+		<spring-cloud-dataflow.version>1.2.3.RELEASE</spring-cloud-dataflow.version>
 		<spring-cloud-deployer-spi.version>1.2.1.RELEASE</spring-cloud-deployer-spi.version>
 		<spring-cloud-kubernetes.version>0.1.6</spring-cloud-kubernetes.version>
 
@@ -60,17 +60,6 @@
 			<dependency>
 				<groupId>io.fabric8</groupId>
 				<artifactId>spring-cloud-starter-kubernetes</artifactId>
-				<version>${spring-cloud-kubernetes.version}</version>
-				<exclusions>
-					<exclusion>
-						<groupId>io.fabric8</groupId>
-						<artifactId>kubernetes-client</artifactId>
-					</exclusion>
-				</exclusions>
-			</dependency>
-			<dependency>
-				<groupId>io.fabric8</groupId>
-				<artifactId>spring-cloud-kubernetes-archaius</artifactId>
 				<version>${spring-cloud-kubernetes.version}</version>
 				<exclusions>
 					<exclusion>
@@ -162,6 +151,24 @@
 					<value>true</value>
 				</property>
 			</activation>
+			<repositories>
+				<repository>
+					<id>bintray-donovanmuller-switchbit-public</id>
+					<name>bintray</name>
+					<url>https://dl.bintray.com/donovanmuller/switchbit-public</url>
+					<snapshots>
+						<enabled>false</enabled>
+					</snapshots>
+				</repository>
+				<repository>
+					<id>spring-releases</id>
+					<name>Spring Releases</name>
+					<url>http://repo.spring.io/release</url>
+					<snapshots>
+						<enabled>false</enabled>
+					</snapshots>
+				</repository>
+			</repositories>
 			<build>
 				<plugins>
 					<plugin>

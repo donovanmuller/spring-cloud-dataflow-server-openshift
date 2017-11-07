@@ -1,4 +1,4 @@
-# Spring Cloud Data Flow Server for OpenShift
+# Spring Cloud Data Flow Server for OpenShift  [![Build Status](https://travis-ci.org/donovanmuller/spring-cloud-dataflow-server-openshift.svg?branch=master)](https://travis-ci.org/donovanmuller/spring-cloud-dataflow-server-openshift) [![codecov](https://codecov.io/gh/donovanmuller/spring-cloud-dataflow-server-openshift/branch/master/graph/badge.svg)](https://codecov.io/gh/donovanmuller/spring-cloud-dataflow-server-openshift)
 
 This project provides a Spring Cloud Data Flow server for deployments to OpenShift 3, using the 
 [Spring Cloud Deployer OpenShift](https://github.com/donovanmuller/spring-cloud-deployer-openshift) 

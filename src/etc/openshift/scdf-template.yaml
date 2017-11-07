@@ -10,6 +10,7 @@ metadata:
       All other resources such as RDBMS, Redis and Spring Cloud Stream binder implementation (Kafka, Redis, etc.) are not provided.
       These resources should be deployed separately and the Data Flow Server configuration added via the ConfigMap.
     iconClass: "icon-spring"
+    tags: "integration,spring-cloud"
 message: Spring Cloud Data Flow Server for OpenShift is being deployed...
 labels:
   template: "scdf"
@@ -75,7 +76,7 @@ objects:
         spec:
           containers:
             - name: "scdf"
-              image: "donovanmuller/spring-cloud-dataflow-server-openshift:1.2.0.RELEASE"
+              image: "donovanmuller/spring-cloud-dataflow-server-openshift:1.2.1.RELEASE"
               env:
                 - name: KUBERNETES_NAMESPACE
                   valueFrom:

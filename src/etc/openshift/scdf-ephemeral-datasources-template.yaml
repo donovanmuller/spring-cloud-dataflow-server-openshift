@@ -9,6 +9,7 @@ metadata:
       This template deploys the Data Flow Server, an ephemeral MySQL container and ephemeral Redis container.
       These resources sare configured by means of the ConfigMap.
     iconClass: "icon-spring"
+    tags: "integration,spring-cloud"
 message: |-
   Spring Cloud Data Flow Server for OpenShift, MySQL and Redis are being deployed...
   MySQL password is: ${DEPLOYER_DATASOURCE_PASSWORD}
@@ -80,7 +81,7 @@ objects:
         spec:
           containers:
             - name: "scdf-ephemeral"
-              image: "donovanmuller/spring-cloud-dataflow-server-openshift:1.2.0.RELEASE"
+              image: "donovanmuller/spring-cloud-dataflow-server-openshift:1.2.1.RELEASE"
               env:
                 - name: KUBERNETES_NAMESPACE
                   valueFrom:

@@ -360,9 +360,9 @@ For this example we will register the apps individually using the following comm
 [subs="attributes"]
 [source,console]
 ----
-dataflow:>app register --type source --name time-mvn --uri maven://org.springframework.cloud.stream.app:time-source-kafka:{dataflow-project-version}
+dataflow:>app register --type source --name time-mvn --uri maven://org.springframework.cloud.stream.app:time-source-kafka:{stream-starters-bacon-release-version}
 Successfully registered application 'source:time-mvn'
-dataflow:>app register --type sink --name log-mvn --uri maven://org.springframework.cloud.stream.app:log-sink-kafka:{dataflow-project-version}
+dataflow:>app register --type sink --name log-mvn --uri maven://org.springframework.cloud.stream.app:log-sink-kafka:{stream-starters-bacon-release-version}
 Successfully registered application 'sink:log-mvn'
 ----
 

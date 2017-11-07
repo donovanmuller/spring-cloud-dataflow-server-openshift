@@ -15,10 +15,12 @@ https://docs.openshift.org/latest/dev_guide/builds.html[Build] mechanism.
 
 For example, both the below app registrations (via the Data Flow Shell) are valid and supported:
 
-```
-dataflow:>app register --name http-mvn --type source --uri maven://org.springframework.cloud.stream.app:http-source-rabbit:1.1.0.RELEASE
-dataflow:>app import --name http-docker --type source --uri app register --name http --type source --uri docker:springcloudstream/http-source-rabbit:1.1.0.RELEASE
-```
+[subs="attributes"]
+[source,console]
+----
+dataflow:>app register --name http-mvn --type source --uri maven://org.springframework.cloud.stream.app:http-source-rabbit:{stream-starters-bacon-release-version}
+dataflow:>app import --name http-docker --type source --uri app register --name http --type source --uri docker:springcloudstream/http-source-rabbit:{stream-starters-bacon-release-version}
+----
 
 See the <<getting-started>> section for examples of deploying both Docker and Maven resource types.
 
