@@ -32,7 +32,7 @@ before_install:
   - if [ ! -z "$GPG_OWNERTRUST" ]; then echo $GPG_OWNERTRUST | base64 --decode | gpg --import-ownertrust; fi
 
 script:
-  - ./mvnw --batch-mode cobertura:cobertura -DperformRelease=true -Dlogging.level.=ERROR
+  - ./mvnw --batch-mode cobertura:cobertura -Dlogging.level.=ERROR
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)

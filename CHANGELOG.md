@@ -1,5 +1,30 @@
 # Change Log
 
+## [v1.2.1.RELEASE](https://github.com/donovanmuller/spring-cloud-dataflow-server-openshift/tree/v1.2.1.RELEASE) (2017-11-07)
+[Full Changelog](https://github.com/donovanmuller/spring-cloud-dataflow-server-openshift/compare/v1.2.0.RELEASE...v1.2.1.RELEASE)
+
+**Implemented enhancements:**
+
+- Add 'tags' to Templates [\#13](https://github.com/donovanmuller/spring-cloud-dataflow-server-openshift/issues/13)
+
+**Fixed bugs:**
+
+- Can not deploy SCDF on openshift with the template [\#24](https://github.com/donovanmuller/spring-cloud-dataflow-server-openshift/issues/24)
+
+**Closed issues:**
+
+- SCDF route naming uses '.' rather than '-' as a separator [\#26](https://github.com/donovanmuller/spring-cloud-dataflow-server-openshift/issues/26)
+- Sample stream pods deployed on SCDF do not start up on Openshift [\#25](https://github.com/donovanmuller/spring-cloud-dataflow-server-openshift/issues/25)
+- Setting the deployment properties in the gui [\#23](https://github.com/donovanmuller/spring-cloud-dataflow-server-openshift/issues/23)
+- Cant deploy templates from Openshift web console [\#22](https://github.com/donovanmuller/spring-cloud-dataflow-server-openshift/issues/22)
+- Error during installing the OpenShift templates [\#21](https://github.com/donovanmuller/spring-cloud-dataflow-server-openshift/issues/21)
+- Error in Openshift when deploying custom stream app [\#20](https://github.com/donovanmuller/spring-cloud-dataflow-server-openshift/issues/20)
+- Update OpenShift Templates for new 1.2 releases [\#19](https://github.com/donovanmuller/spring-cloud-dataflow-server-openshift/issues/19)
+- Add RBAC to OpenShift Templates [\#18](https://github.com/donovanmuller/spring-cloud-dataflow-server-openshift/issues/18)
+- Roadmap 1.2.0 Milestone [\#16](https://github.com/donovanmuller/spring-cloud-dataflow-server-openshift/issues/16)
+- Build error [\#14](https://github.com/donovanmuller/spring-cloud-dataflow-server-openshift/issues/14)
+- Add CI configuration [\#4](https://github.com/donovanmuller/spring-cloud-dataflow-server-openshift/issues/4)
+
 ## [v1.2.0.RELEASE](https://github.com/donovanmuller/spring-cloud-dataflow-server-openshift/tree/v1.2.0.RELEASE) (2017-07-09)
 [Full Changelog](https://github.com/donovanmuller/spring-cloud-dataflow-server-openshift/compare/v1.1.0.RELEASE...v1.2.0.RELEASE)
 
