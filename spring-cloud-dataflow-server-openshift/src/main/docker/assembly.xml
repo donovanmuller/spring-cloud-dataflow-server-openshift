@@ -9,7 +9,7 @@
                 <include>${project.groupId}:${project.artifactId}</include>
             </includes>
             <outputDirectory>.</outputDirectory>
-            <outputFileNameMapping>deployments/app.jar</outputFileNameMapping>
+            <outputFileNameMapping>${project.artifactId}.jar</outputFileNameMapping>
         </dependencySet>
     </dependencySets>
 </assembly>
