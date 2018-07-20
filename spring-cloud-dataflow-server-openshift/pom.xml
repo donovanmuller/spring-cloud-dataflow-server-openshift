@@ -5,7 +5,7 @@
     <parent>
         <artifactId>spring-cloud-dataflow-server-openshift-parent</artifactId>
         <groupId>org.springframework.cloud</groupId>
-        <version>1.2.1.BUILD-SNAPSHOT</version>
+        <version>1.5.0.BUILD-SNAPSHOT</version>
     </parent>
 
     <artifactId>spring-cloud-dataflow-server-openshift</artifactId>
@@ -34,7 +34,7 @@
             <scope>runtime</scope>
         </dependency>
         <dependency>
-            <groupId>io.fabric8</groupId>
+            <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-kubernetes</artifactId>
         </dependency>
     </dependencies>
@@ -62,7 +62,7 @@
             <plugin>
                 <groupId>io.fabric8</groupId>
                 <artifactId>docker-maven-plugin</artifactId>
-                <version>0.22.1</version>
+                <version>0.26.0</version>
                 <configuration>
                     <images>
                         <image>
